@@ -238,6 +238,30 @@ pairwise.perm.manova(dist(data.sppwide.pa, "euclidian"), enviro$location, nperm=
 pairwise.perm.manova(dist(data.sppwide.pa, "euclidian"), enviro$spp, nperm=2000)
 # RESULTS: Nearly all species combinations are different, with the exception of BOER/PLJA which p=0.176
 
+## Making a dataset I can graph
+nmds.pres <-m2$points #pulling out just the scores
+nmds.pres <- as.data.frame(nmds.pres) # making it a dataframe
+nmds.pres <- add_rownames(nmds.pres, "sample") #making rownames into a column
+nmds.pres <- as.data.frame(nmds.pres) #making it a dataframe again
+nmds.pres <- nmds.pres %>%
+	separate(sample, c("habitat", "spp", "rep"),"_") #split grouping column
+
+# Graphing the Presense/Absence ordination
+# See notes above on abundance graph regarding what I'd like to fix here, too
+pres <-ggplot(nmds.pres, aes(x=MDS1, y=MDS2, fill = habitat, shape = spp)) +
+	geom_point(aes(colour=habitat)) +
+	theme_classic () +
+	ylab("NMDS 2") +
+	xlab("NMDS 1") +
+	scale_fill_manual(values = c("red", "black", "orange")) + #this doesn't work
+	theme(axis.text.y = element_text(size=14),
+		axis.text.x = element_text(size = 14),
+		axis.title.y = element_text(size = 16, face = "plain"),
+		axis.title.x = element_text(size = 16, face = "plain"),
+		panel.border = element_rect(colour ="black", size = 1, fill=NA)
+		)
+pres
+
 
 ############################# more visuals #####################################
 
