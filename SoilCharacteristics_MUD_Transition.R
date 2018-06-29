@@ -60,6 +60,43 @@ str(tex)
 TernaryPlot(alab='sand', blab ='silt', clab='clay')
 TernaryPoints(tex, col="red")
 
+## ~*~*~*~*~*~*~*~ GRAPHING SOIL NUTRIENTS ~*~*~*~*~*~*~*~ 
+## reordering data based on habitat and species
+char$LocSpp <- factor(char$LocSpp, levels =c("Grass_BOGR", "Grass_BOER", "Grass_PLJA", "Ecotone_BOER", "Ecotone_PLJA", "Ecotone_LATR", "Shrub_LATR"))
+
+## Things to fix on graph
+# color code to match other graphs
+# put a box around it
+# all nutrient graphs together in a panel
+# Better labeling on x-axis = just habitat type with each word listed once (e.g., not repeated under each bar)
+
+#Soil P
+p = ggplot(data=char) +
+	geom_boxplot(aes(x=factor(LocSpp), y= P_ppm, fill=factor(Spp))) +
+	theme(panel.border = element_rect(colour ="black", size = 1, fill=NA),
+	axis.text.x=element_text(angle=90))
+p
+
+#Soil K
+k = ggplot(data=char) +
+	geom_boxplot(aes(x=factor(LocSpp), y= K_ppm, fill=factor(Spp))) +
+	theme(panel.border = element_rect(colour ="black", size = 1, fill=NA),
+	axis.text.x=element_text(angle=90))
+k
+
+#Soil N
+n = ggplot(data=char) +
+	geom_boxplot(aes(x=factor(LocSpp), y= NO3_N_ppm, fill=factor(Spp))) +
+	theme(panel.border = element_rect(colour ="black", size = 1, fill=NA),
+	axis.text.x=element_text(angle=90))
+n
+
+#Soil OM
+om = ggplot(data=char) +
+	geom_boxplot(aes(x=factor(LocSpp), y= OM_percent, fill=factor(Spp))) +
+	theme(panel.border = element_rect(colour ="black", size = 1, fill=NA),
+	axis.text.x=element_text(angle=90))
+om
 
 
 #~*~*~*~*~*~*~STATISTICAL TESTS FOR ENVIROMENTAL VARIABLES*~*~*~*~*~*~*~
@@ -110,8 +147,6 @@ a7 <- aov(char$pH ~ char$Spp + char$Location)
 posthoc7 <-TukeyHSD(x=a7, 'char$Spp', conf.level=0.95)
 print(posthoc7)
 #RESULTS: LATR and BOGR different, all else not
-
-
 
 
 ## Note: this data distribution doens't really match model assuptions very well. But there are a decent amount of zeros in the data so I also cannot log transform the data and run the test without having to throw out those data. I'd like to keep the zeros in, so for now I am sticking with the less than ideal model until I can find something better
