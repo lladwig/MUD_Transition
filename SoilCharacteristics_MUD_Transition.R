@@ -34,6 +34,8 @@ library(lme4)
 library(Ternary)
 library(car)
 
+char<-read.csv("SoilCharacteristics_MUD_Transition.csv")
+
 ## ~*~*~*~*~*~*~*~ GRAPHING SOIL TEXTURE~*~*~*~*~*~*~*~ 
 # This works, just have to get different colors
 ## Attempting to make a triangular (ternary) plot
@@ -43,7 +45,7 @@ char$LocSpp <-paste(char$Location, char$Spp, sep="_")
 print(char)
 
 #subsetting soil texture. have to figure out how to keep "unique" in there
-tex <- char[c(5:7)]
+tex <- char[c(6:8)]
 str(tex)
 
 #get rid of NAs
@@ -51,7 +53,9 @@ tex<-tex[complete.cases(tex), ]
 str(tex)
 
 # Ternaryplot with vcd takes matrices but not data frames, but with Ternary data frames can be used, too
-# Future possibilities: Only graph averages of spp by location
+# Future possibilities to make graph prettier: 
+# Only graph averages of spp by location
+# color-code points to match other graphs
 #xM <-as.matrix()
 TernaryPlot(alab='sand', blab ='silt', clab='clay')
 TernaryPoints(tex, col="red")
