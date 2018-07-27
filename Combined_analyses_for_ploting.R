@@ -32,13 +32,16 @@ library(lme4)
 library(Ternary) # making triangular plots
 library(car) #for correct ANOVA table
 library(RVAideMemoire) # for tests after PERMANOVA
+library("gridExtra")
+library(ggpubr)
+library(cowplot)
 options(contrasts=c("contr.sum", "contr.poly"))
 #Importing the data
 eea <-read.csv("EEA_MUD_transition.csv")
 str(eea)
 eea$AAP_soil <- as.numeric(levels(eea$AAP_soil)) [eea$AAP_soil] # changing factor to numeric
 eea$AAP_OM <- as.numeric(levels(eea$AAP_OM)) [eea$AAP_OM] # changing factor to numeric
-colnames(eea)[1]="Site"
+#colnames(eea)[1]="Site"
 
 # ~*~*~*~*~*~Statistical Tests to see if actvity varies by species or location~*~*~*~*~*~
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*
@@ -51,7 +54,7 @@ colnames(eea)[1]="Site"
 
 ######## EEA Per Gram Soil Tests ##############
 ###############################################
-mod_nag_soil <- lm(log(NAG_soil) ~ Species + Site, data=eea)
+mod_nag_soil <- lm(log(NAG_soil+1) ~ Species + Site, data=eea)
 qqPlot(stdres(mod_nag_soil))
 hist(stdres(mod_nag_soil))
 shapiro.test(stdres(mod_nag_soil))
@@ -176,17 +179,164 @@ plot(mod_bg_om_log) #yes, log fits it better
 eea=eea %>% group_by(Site,Species)
 eea_sum=summarise_at(eea, vars(NAG_soil,AlkP_soil,AAP_soil,BG_soil),funs(mean,se=sd(.)/sqrt(n()),sd))
 eea_sum$site_spp=with(eea_sum, interaction(Site,Species))
-positions=c("G.Boer", "G.Bogr", "G.Plja", "E.Boer", "E.Plja", "E.Latr", "S.Latr")
+positions=c("G.Bogr","G.Boer",  "G.Plja", "E.Boer", "E.Plja", "E.Latr", "S.Latr")
 
 NAG_g=ggplot(eea_sum, aes(site_spp, NAG_soil_mean, ymin = NAG_soil_mean-NAG_soil_se, ymax = NAG_soil_mean+NAG_soil_se))
 
-(NAG_scat_p=NAG_g+geom_errorbar(width=0.25)+geom_line(aes(group = Site))+
+(NAG_scat_p=NAG_g+geom_errorbar(width=0.25)+
     geom_point(size=7,aes(color=Species))+scale_color_brewer(palette="Dark2")+
     scale_y_continuous(name = "NAG activity (??mol,h,g soil)")+scale_x_discrete(limits = positions)+
     theme_bw()+theme(legend.position = "none",axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
                      axis.title.y=element_text(size=20),axis.title.x=element_blank(),panel.grid.major=element_blank(),
                      panel.grid.minor=element_blank()))
 
+eea$site_spp=with(eea, interaction(Site,Species))
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+NAG_box_g=ggplot(eea, aes(x=Site, y=NAG_soil),
+                 fill=Species)
+
+(NAG_box_p=NAG_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=NAG_box_g$data, aes(x=Site, y=NAG_soil,
+                                                     fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "NAG activity (??mol,h,g soil)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                           values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+AlkP_box_g=ggplot(eea, aes(x=Site, y=AlkP_soil),
+                 fill=Species)
+
+(AlkP_box_p=AlkP_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=AlkP_box_g$data, aes(x=Site, y=AlkP_soil,
+                                          fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "AlkP activity (??mol,h,g soil)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                           values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.position = "none", axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+AAP_box_g=ggplot(eea, aes(x=Site, y=AAP_soil),
+                  fill=Species)
+
+(AAP_box_p=AAP_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=AAP_box_g$data, aes(x=Site, y=AAP_soil,
+                                           fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "AAP activity (??mol,h,g soil)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                            values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                            labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.position = "none", axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+BG_box_g=ggplot(eea, aes(x=Site, y=BG_soil),
+                 fill=Species)
+
+(BG_box_p=BG_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=BG_box_g$data, aes(x=Site, y=BG_soil,
+                                          fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "BG activity (??mol,h,g soil)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                           values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+#####Grid Arrange####
+
+grid.arrange(AlkP_box_p,NAG_box_p,AAP_box_p,BG_box_p, nrow=2,ncol=2,heights=c(1,1.1),widths=c(1,1.2))
+#
+
+ggdraw()+
+  draw_plot(AlkP_box_p, x = 0, y = .52, width = .45, height = .48)+
+  draw_plot(NAG_box_p, x = .45, y = .52, width = .55, height = .48)+
+  draw_plot(AAP_box_p, x = 0, y = 0, width = .45, height = .52)+
+  draw_plot(BG_box_p, x = .45, y = 0, width = .55, height = .52)
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+NAG_OM_box_g=ggplot(eea, aes(x=Site, y=NAG_OM),
+                 fill=Species)
+
+(NAG_OM_box_p=NAG_OM_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=NAG_OM_box_g$data, aes(x=Site, y=NAG_OM,
+                                          fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "NAG activity (??mol,h,g OM)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                           values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+AlkP_OM_box_g=ggplot(eea, aes(x=Site, y=AlkP_OM),
+                  fill=Species)
+
+(AlkP_OM_box_p=AlkP_OM_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=AlkP_OM_box_g$data, aes(x=Site, y=AlkP_OM,
+                                           fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "AlkP activity (??mol,h,g OM)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                            values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                            labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.position = "none", axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+AAP_OM_box_g=ggplot(eea, aes(x=Site, y=AAP_OM),
+                 fill=Species)
+
+(AAP_OM_box_p=AAP_OM_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=AAP_OM_box_g$data, aes(x=Site, y=AAP_OM,
+                                          fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "AAP activity (??mol,h,g OM)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                           values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.position = "none", axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+BG_OM_box_g=ggplot(eea, aes(x=Site, y=BG_OM),
+                fill=Species)
+
+(BG_OM_box_p=BG_OM_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=BG_OM_box_g$data, aes(x=Site, y=BG_OM,
+                                         fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "BG activity (??mol,h,g OM)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                          values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                          labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+#####Grid Arrange####
+
+grid.arrange(AlkP_OM_box_p,NAG_OM_box_p,AAP_OM_box_p,BG_OM_box_p, nrow=2,ncol=2,heights=c(1,1.1),widths=c(1,1.2))
+
+ggdraw()+
+  draw_plot(AlkP_OM_box_p, x = 0.01, y = .52, width = .44, height = .48)+
+  draw_plot(NAG_OM_box_p, x = .46, y = .51, width = .54, height = .48)+
+  draw_plot(AAP_OM_box_p, x = 0, y = 0, width = .45, height = .52)+
+  draw_plot(BG_OM_box_p, x = .45, y = 0, width = .55, height = .52)
 
 
 ## ~*~*~*~*~*~*~*~ GRAPHING SOIL TEXTURE~*~*~*~*~*~*~*~ 
@@ -353,6 +503,71 @@ par(mfrow=c(1,1))
 #qqnorm(resid(mod_clay))
 #qqnorm(ranef(mod_clay)[,1])
 #plot (x, resid(mod_clay))
+
+
+positions3=c("Grass","Ecotone","Shrub")
+spp_pos2=c("BOGR","BOER","PLJA","LATR")
+P_ppm_box_g=ggplot(char, aes(x=Location, y=P_ppm),
+                 fill=Spp)
+
+(P_ppm_box_p=P_ppm_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Spp, levels=spp_pos2)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=P_ppm_box_g$data, aes(x=Location, y=P_ppm,
+                                          fill=factor(Spp, levels=spp_pos2)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions3,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "P ppm")+xlab(NULL)+scale_fill_manual(limits = spp_pos2, 
+                                                                                           values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+NO3_N_ppm_box_g=ggplot(char, aes(x=Location, y=NO3_N_ppm),
+                   fill=Spp)
+(NO3_N_ppm_box_p=NO3_N_ppm_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Spp, levels=spp_pos2)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=NO3_N_ppm_box_g$data, aes(x=Location, y=NO3_N_ppm,
+                                            fill=factor(Spp, levels=spp_pos2)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions3,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = bquote(~NO[3]~ 'ppm'))+xlab(NULL)+scale_fill_manual(limits = spp_pos2, 
+                                                                    values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                    labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+K_ppm_box_g=ggplot(char, aes(x=Location, y=K_ppm),
+                       fill=Spp)
+(K_ppm_box_p=K_ppm_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Spp, levels=spp_pos2)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=K_ppm_box_g$data, aes(x=Location, y=K_ppm,
+                                                fill=factor(Spp, levels=spp_pos2)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions3,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "K ppm")+xlab(NULL)+scale_fill_manual(limits = spp_pos2, 
+                                                                                  values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                  labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+OM_percent_box_g=ggplot(char, aes(x=Location, y=OM_percent),
+                   fill=Spp)
+(OM_percent_box_p=OM_percent_box_g+stat_boxplot(geom = "errorbar", aes(color=factor(Spp, levels=spp_pos2)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=OM_percent_box_g$data, aes(x=Location, y=OM_percent,
+                                            fill=factor(Spp, levels=spp_pos2)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions3,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Percentage OM")+xlab(NULL)+scale_fill_manual(limits = spp_pos2, 
+                                                                    values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                    labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=20), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+#####Grid Arrange####
+
+ggarrange(P_ppm_box_p,NO3_N_ppm_box_p,K_ppm_box_p,OM_percent_box_p, nrow=4,ncol=1,heights=c(1,1,1,1.1),align = "v")
 
 # This is the fungal data that Lukas pipelined for me and I'm getting to look at for the first time! The bacterial sequesces were a dud, so this project will mainly be on fungi. For methods on how data were cleaned and pipelined, see Lukas
 
