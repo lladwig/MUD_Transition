@@ -174,6 +174,75 @@ max(sample_sums(MUD.data))
 #3088.89
 
 
+#Diversity 
+
+alpha_meas = c("Shannon", "InvSimpson")
+MUD.data.divfil=estimate_richness(MUD.data,measures=alpha_meas)
+MUD.data_map=sample_data(MUD.data)
+
+MUD.data.divfil=merge(MUD.data.divfil, MUD.data_map, by ="row.names")
+
+
+#Shannon
+Shannon_mod <- lm((Shannon) ~ Species + Site, data=MUD.data.divfil)
+qqPlot(stdres(Shannon_mod))
+hist(stdres(Shannon_mod))
+shapiro.test(stdres(Shannon_mod))
+#0.3025
+summary(Shannon_mod)
+Anova(Shannon_mod, type=3)
+#nada sig
+#emmeans(Shannon_mod, pairwise~Site)
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Shannon_g=ggplot(MUD.data.divfil, aes(x=Site, y=Shannon),
+                    fill=Species)
+
+(Shannon_box_p=Shannon_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Shannon_g$data, aes(x=Site, y=Shannon,
+                                             fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Shannon diversity")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                         values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                         labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+#Simpson
+Simpson_mod <- lm((InvSimpson) ~ Species + Site, data=MUD.data.divfil)
+qqPlot(stdres(Simpson_mod))
+hist(stdres(Simpson_mod))
+shapiro.test(stdres(Simpson_mod))
+#0.7644
+summary(Simpson_mod)
+Anova(Simpson_mod, type=3)
+#nada sig
+#emmeans(Shannon_mod, pairwise~Site)
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Simpson_g=ggplot(MUD.data.divfil, aes(x=Site, y=InvSimpson),
+                 fill=Species)
+
+(Simpson_box_p=Simpson_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Simpson_g$data, aes(x=Site, y=InvSimpson,
+                                          fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Inverse Simpson diversity")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+
 #How do phylum level community change over the transect
 
 MUD.data_fact=merge_samples(MUD.data, "site_spp")
@@ -219,12 +288,19 @@ MUD.data.ord <- ordinate(MUD.data, method="NMDS",distance = "bray")
 #Scaling: centring, PC rotation, halfchange scaling 
 #Species: expanded scores based on 'wisconsin(veganifyOTU(physeq))' 
 
-plot_ordination(MUD.data, MUD.data.ord)+
-  geom_point(size=3, aes(color=Site,shape=Species))+
-  scale_color_brewer(palette = "Dark2",labels=c("Ecotone",
-                                                             "Grassland",
-                                                             "Shrub"))+
-  scale_shape_manual(values=c(16,17,18,15),name="",labels=c("BEOR","BOGR","LATR","PLJA"))+
+plot_ordination(MUD.data, MUD.data.ord)
+MUD.data_map=sample_data(MUD.data)
+MUD.data_ord_points=merge(MUD.data.ord$points,MUD.data_map,by="row.names")
+colnames(MUD.data_ord_points)
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("G","E","S")
+
+unique(MUD.data_map$Site)
+ggplot(data=MUD.data_ord_points, aes(x=MDS1,y=MDS2))+
+  geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
+  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
+  scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
   theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
                    axis.title.x=element_text(size=12),axis.title.y=element_blank(),
                    panel.grid.major=element_blank(),panel.grid.minor=element_blank())
@@ -338,6 +414,90 @@ mantel(MUD.data.dist,eea.dist)
 #Mantel statistic r: 0.2045 
 #Significance: 0.001 
 
+#EEA SOils
+eea_soil <- c("NAG_soil", "AlkP_soil","AAP_soil","BG_soil")
+eea.nom_soil=eea.nom[,eea_soil]
+trt_map=MUD.data_map[,c("Site","Species")]
+eea.dist_soil=vegdist(eea.nom_soil,method="euclidean")
+
+eea.nom_soil_trt=merge(eea.nom_soil,trt_map,by="row.names")
+eea.nom_soil.ord=metaMDS(eea.dist_soil)
+
+eea.nom_soi_ord_points=merge(eea.nom_soil.ord$points,MUD.data_map,by="row.names")
+colnames(eea.nom_soi_ord_points)
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("G","E","S")
+
+unique(MUD.data_map$Site)
+ggplot(data=eea.nom_soi_ord_points, aes(x=MDS1,y=MDS2))+
+  geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
+  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
+  scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
+  theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
+                   axis.title.x=element_text(size=12),axis.title.y=element_blank(),
+                   panel.grid.major=element_blank(),panel.grid.minor=element_blank())
+
+
+eea_soil=eea[,eea_soil]
+trt_map=MUD.data_map[,c("Site","Species")]
+eea.dist_soil=vegdist(eea_soil,method="euclidean")
+
+eea.nom_soil_trt=merge(eea.nom_soil,trt_map,by="row.names")
+eea.nom_soil.ord=metaMDS(eea.dist_soil)
+
+eea.nom_soi_ord_points=merge(eea.nom_soil.ord$points,MUD.data_map,by="row.names")
+colnames(eea.nom_soi_ord_points)
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("G","E","S")
+
+unique(MUD.data_map$Site)
+ggplot(data=eea.nom_soi_ord_points, aes(x=MDS1,y=MDS2))+
+  geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
+  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
+  scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
+  theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
+                   axis.title.x=element_text(size=12),axis.title.y=element_blank(),
+                   panel.grid.major=element_blank(),panel.grid.minor=element_blank())
+
+test_perm <- adonis (eea.dist_soil ~ MUD.data_map$Location + MUD.data_map$Spp, permutations=10000)
+print(test_perm)
+# I *think* this code is a quasi post-hoc test that will compare the locations
+pairwise.perm.manova(eea.dist_soil, MUD.data_map$Location, nperm=2000)
+
+
+
+#OM 
+eea_OM_names <- c("NAG_OM", "AlkP_OM","AAP_OM","BG_OM")
+eea_OM=eea[,eea_OM_names]
+trt_map=MUD.data_map[,c("Site","Species")]
+eea.dist_OM=vegdist(eea_OM,method="euclidean")
+
+eea.nom_OM_trt=merge(eea_OM,trt_map,by="row.names")
+eea.nom_OM.ord=metaMDS(eea.dist_OM)
+
+eea.nom_OM_ord_points=merge(eea.nom_OM.ord$points,MUD.data_map,by="row.names")
+colnames(eea.nom_OM_ord_points)
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("G","E","S")
+
+unique(MUD.data_map$Site)
+ggplot(data=eea.nom_OM_ord_points, aes(x=MDS1,y=MDS2))+
+  geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
+  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
+  scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
+  theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
+                   axis.title.x=element_text(size=12),axis.title.y=element_blank(),
+                   panel.grid.major=element_blank(),panel.grid.minor=element_blank())
+
+
+test_perm <- adonis (eea.dist_OM ~ MUD.data_map$Location + MUD.data_map$Spp, permutations=10000)
+print(test_perm)
+# I *think* this code is a quasi post-hoc test that will compare the locations
+#pairwise.perm.manova(MUD.data.dist, MUD.data_map$Location, nperm=2000)
+
 #let's run a mantel test between the soil nutrients and community dist
 #first let's normalize so values are between 1 and 0
 
@@ -355,6 +515,35 @@ mantel(eea.dist,char.dist)
 #Mantel statistic r: 0.138 
 #Significance: 0.029 
 
+
+
+char.dist=vegdist(char.dist,method="euclidean")
+
+char.nom_trt=merge(eea_OM,trt_map,by="row.names")
+char.nom.ord=metaMDS(char.dist)
+
+char.nom_ord_points=merge(char.nom.ord$points,MUD.data_map,by="row.names")
+colnames(char.nom_ord_points)
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("G","E","S")
+
+unique(MUD.data_map$Site)
+ggplot(data=char.nom_ord_points, aes(x=MDS1,y=MDS2))+
+  geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
+  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
+  scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
+  theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
+                   axis.title.x=element_text(size=12),axis.title.y=element_blank(),
+                   panel.grid.major=element_blank(),panel.grid.minor=element_blank())
+
+
+test_perm <- adonis (char.dist ~ MUD.data_map$Location + MUD.data_map$Spp, permutations=10000)
+print(test_perm)
+# I *think* this code is a quasi post-hoc test that will compare the locations
+pairwise.perm.manova(char.dist, MUD.data_map$Location, nperm=2000)
+
+pairwise.perm.manova(char.dist, MUD.data_map$Species, nperm=2000)
 
 #let try a partial mantel 
 
@@ -406,6 +595,73 @@ untrans.otu=read.table("MUD_fungi_OTU_ITS_trunc_phyl.txt")
 untrans.MUD.OTU = otu_table(untrans.otu, taxa_are_rows = TRUE)
 MUD.data_untrans=phyloseq(untrans.MUD.OTU,sample_data(MUD.map_eea_char),MUD.fung.TAX)
 
+
+Rich_meas = c("Observed", "Chao1")
+untrans.MUD.data.divfil=estimate_richness(MUD.data_untrans,measures=Rich_meas)
+untrans.MUD.data_map=sample_data(MUD.data_untrans)
+
+untrans.MUD.data.divfil=merge(untrans.MUD.data.divfil, untrans.MUD.data_map, by ="row.names")
+
+
+#Observed Richness
+Observed_R_mod <- lm((Observed) ~ Species + Site, data=untrans.MUD.data.divfil)
+qqPlot(stdres(Observed_R_mod))
+hist(stdres(Observed_R_mod))
+shapiro.test(stdres(Observed_R_mod))
+#0.8072
+summary(Observed_R_mod)
+Anova(Observed_R_mod, type=3)
+#nada sig
+#emmeans(Shannon_mod, pairwise~Site)
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Observed_R_g=ggplot(untrans.MUD.data.divfil, aes(x=Site, y=Observed),
+                 fill=Species)
+
+(Observed_R_box_p=Observed_R_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Observed_R_g$data, aes(x=Site, y=Observed,
+                                          fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Observed raw richness")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+#Chao1
+Chao1_mod <- lm((Chao1) ~ Species + Site, data=untrans.MUD.data.divfil)
+qqPlot(stdres(Chao1_mod))
+hist(stdres(Chao1_mod))
+shapiro.test(stdres(Chao1_mod))
+#0.9112
+summary(Chao1_mod)
+Anova(Chao1_mod, type=3)
+#nada sig
+#emmeans(Shannon_mod, pairwise~Site)
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Chao1_R_g=ggplot(untrans.MUD.data.divfil, aes(x=Site, y=Chao1),
+                    fill=Species)
+
+(Chao1_R_box_p=Chao1_R_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Chao1_R_g$data, aes(x=Site, y=Chao1,
+                                             fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Chao1 Richness")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                    values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                    labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
 #presence absence
 MUD.data_pa=transform_sample_counts(MUD.data_untrans,pa)
 max(otu_table(MUD.data_pa))
@@ -419,12 +675,19 @@ MUD.data_pa.ord <- ordinate(MUD.data_pa, method="NMDS",distance = "jaccard")
 #Scaling: centring, PC rotation, halfchange scaling 
 #Species: expanded scores based on 'veganifyOTU(physeq)' 
 
-plot_ordination(MUD.data_pa, MUD.data_pa.ord)+
-  geom_point(size=3, aes(color=Site,shape=Species))+
-  scale_color_brewer(palette = "Dark2",name="Species",labels=c("Ecotone",
-                                                "Grassland",
-                                                "Shrub"))+
-  scale_shape_manual(values=c(16,17,18,15),name="Location",labels=c("BEOR","BOGR","LATR","PLJA"))+
+plot_ordination(MUD.data_pa, MUD.data_pa.ord)
+untrans.MUD.data_map=sample_data(MUD.data_untrans)
+MUD.data_pa_ord_points=merge(MUD.data_pa.ord$points,untrans.MUD.data_map,by="row.names")
+colnames(MUD.data_pa_ord_points)
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("G","E","S")
+
+unique(untrans.MUD.data_map$Site)
+ggplot(data=MUD.data_pa_ord_points, aes(x=MDS1,y=MDS2))+
+  geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
+  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
+  scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
   theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
                    axis.title.x=element_text(size=12),axis.title.y=element_blank(),
                    panel.grid.major=element_blank(),panel.grid.minor=element_blank())
@@ -709,6 +972,61 @@ fung.clayT10.prop = prune_taxa(TopPHYL, MUD.data_fact.phylum.prop)
 
 
 
+
+#Simple 60c
+MUD.fung.tax_60=as.matrix(read.table("ITS_MUD_sintax_simple_60.txt",header=T))
+MUD.fung.TAX_60 = tax_table(MUD.fung.tax_60)
+MUD.data_60=phyloseq(MUD.OTU,sample_data(MUD.map_eea_char),MUD.fung.TAX_60)
+
+
+sum(otu_table(MUD.data_60))
+#4238112
+#120193.4
+MUD.Fung=subset_taxa(MUD.data_60, Domain=="d:Fungi")
+ntaxa(MUD.Fung)
+#4951
+sum(otu_table(MUD.Fung))
+#4235030
+#120193.4
+
+sort(sample_sums(MUD.Fung))
+
+
+MUD.Fung_fact=merge_samples(MUD.Fung, "site_spp")
+sample_names(MUD.Fung_fact)     
+
+get_taxa_unique(MUD.Fung_fact, taxonomic.rank="Phylum")
+#12
+(MUD.Fung_fact.phylum<-tax_glom(MUD.Fung_fact, taxrank="Phylum"))
+
+
+
+
+TopPHYL.f = names(sort(taxa_sums(MUD.Fung_fact.phylum), TRUE)[1:10])
+mud_fung.T10.f = prune_taxa(TopPHYL.f, MUD.Fung_fact.phylum)
+
+plot_bar(mud_fung.T10.f, x= "site_spp", fill="Phylum")+ 
+  geom_bar(aes(color=Phylum, fill=Phylum), stat="identity", position="stack")
+
+
+
+
+MUD.data_fact.phylum.prop=transform_sample_counts(MUD.Fung_fact.phylum, function(x)x/sum(x))
+sort(get_taxa_unique(MUD.data_fact.phylum.prop, taxonomic.rank="Phylum"))
+
+sample_names(MUD.data_fact.phylum.prop)
+
+trans_positions=c("G.Bogr","G.Boer", "G.Plja", "E.Boer", "E.Plja", "E.Latr", "S.Latr")
+fung.clayT10.prop = prune_taxa(TopPHYL.f, MUD.data_fact.phylum.prop)
+(p_fung_T10=plot_bar(fung.clayT10.prop, fill="Phylum")+ylab("Proportion")+ 
+    geom_bar(aes( fill=factor(Phylum)), stat="identity", position="stack",color="black")+xlab(NULL)+
+    scale_fill_brewer(palette = "Spectral")+theme_bw()+theme(axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                                                             axis.title=element_text(size=20),panel.grid.major=element_blank(),
+                                                             panel.grid.minor=element_blank())+
+    scale_x_discrete(limits = trans_positions,labels= c("BOGR","BOER","PLJA","BOER","PLJA","LATR","LATR")))
+
+
+
 # Online script to generate cohesion metrics for a set of samples 
 # CMH 26Apr17; cherren@wisc.edu
 
@@ -751,7 +1069,7 @@ pos.mean <- function(vector){
 pers.cutoff <- 0.10
 ## Decide the number of iterations to run for each taxon. (>= 200 is recommended)
 # Larger values of iter mean the script takes longer to run
-iter <- 40
+iter <- 100
 ## Decide whether to use taxon/column shuffle (tax.shuffle = T) or row shuffle algorithm (tax.shuffle = F)
 tax.shuffle <- T
 ## Option to input your own correlation table
@@ -929,7 +1247,7 @@ print(output)
 mud_untrans_cohension=cbind(output$`Negative Cohesion`, output$`Positive Cohesion`)
 colnames(mud_untrans_cohension)=c("Neg_Cohesion","Pos_Cohesion")
 
-write.csv(mud_untrans_cohension, "mud_untrans_cohension_pos_neg_724.csv")
+write.csv(mud_untrans_cohension, "mud_untrans_cohension_pos_neg_200int.csv")
 
 length(row.names(mud_untrans_cohension))
 #need to fix the one misspelled row name
@@ -978,7 +1296,7 @@ Pos_coh_mod <- lm((Pos_Cohesion)^3 ~ Species + Site, data=MUD_untrans_data)
 qqPlot(stdres(Pos_coh_mod))
 hist(stdres(Pos_coh_mod))
 shapiro.test(stdres(Pos_coh_mod))
-#0.07415
+#0.05848
 summary(Pos_coh_mod)
 Anova(Pos_coh_mod, type=3)
 #nada sig
