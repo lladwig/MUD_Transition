@@ -14,7 +14,6 @@ setwd("/Users/laura/Desktop/Writing Projects/MUD transition/R/Data/")
 # use getwd to confirm that R is now looking here
 getwd()
 
-
 #install.packages("gsubfn")
 library(ggplot2)
 library(gsubfn)
@@ -44,7 +43,7 @@ fun_otu <- read.csv("MUD_fungi_OTU_ITS_VST.csv")# This has been transformed/norm
 #str(fun_otu)
 #head(fun_otu)
 
-#First need to separate data based on project, so pulling out all the SPEGAR first and working with them might be best.
+#First need to separate data based on project, so I need to rearrange things to pull out SPEGAR
 
 # A simple transformation with t fucks up the data format
 #fun_otu_t <-t(fun_otu) #transposing data so I can separate sample names by .
@@ -75,55 +74,6 @@ fuckit_first$grass_rep <-paste(fuckit_first$spp, fuckit_first$rep, sep="_")#maki
 ## Ok, now I have to merge fuckit_first back with the actual data in fuckit
 fun_otu.b <- merge(fuckit_first, fuckit, all=TRUE)
 
-spegar_fun_otu <- fun_otu.b %>%
-	filter(site == "SPEGAR") #Filtering out just SPEGAR data
-	
-spegar_fun_otu <-spegar_fun_otu [,-c(1,2,3,4,5)] # Taking out excess variables for ordination
-
-long <- melt(spegar_fun_otu) # making wide to long
-colnames(long) <-c("site", "spp", "value")
-
-# I need to get rid of OTUs that were present in the other project but not SPEGAR. Not sure what the best way do to it is, but my plan is to take out all the zeros in the long format, then turn it wide and put the zeros back in. Note: it might be worth it to run an ordination with presense/absence data too.
-
-long_here <- long %>%
-	filter(value > 0)
-
-#wide_here <- dcast(long_here, site~spp) #turned data wide 
-
-##This is code for the package "reshape2". 
-#Cast (wtf) abundance data
-short=dcast(long_here, site~spp) #there shouldn't be duplicates here, so I don't know why sum is needed...
-short[is.na(short)] = 0 #replaces NAs with 0s
-rownames(short)<-short$site #set rownames to site names
-short=short[,-1] 		#drop site names column
-
-#library(vegan)
-#library(MASS)     
-m1 <- metaMDS(short, distance = "bray", k = 3, trymax = 500,
-        autotransform =FALSE,  
-        wascores = TRUE, expand = TRUE,
-        trace = 1, plot = TRUE,)
-
-#This is the code I should need for running an ordination
-#plot ordination
-plot(m1, display = c("sites"), choices = c(1,2),
-     type = "t", shrink = TRUE)
-plot(m1, display = c("sites"), choices = c(1,3),
-     type = "t", shrink = TRUE)
-plot(m1, display = c("sites"), choices = c(2,3),
-     type = "t", shrink = TRUE)
-scores(m1, display = c("sites", "species"), shrink = FALSE)
- 
-#write.table(short,"/Users/laura/Desktop/Writing Projects/Savannas - WI/R/Results/OrdinationScoresAllCommunities_20170509.txt", sep="\t")       
-print (m1)
-str(m1)     
-m1$species
-m1$points
-m1$ndim    
-
-
-##### Now lets look at the transect data (eg, non-SPEGAR)
-# --------------------------------------------------------------------------------
 fuckit_first$site_spp_rep <-paste(fuckit_first$site, fuckit_first$grass_rep, sep="_")#making a unique variable for the ordination
 fun_otu.c <- merge(fuckit_first, fuckit, all=TRUE)
 transect_fun_otu <- fun_otu.c %>%
@@ -135,7 +85,8 @@ transect_fun_otu <- transect_fun_otu %>%
 transect_fun_otu <- transect_fun_otu %>%
 	filter(site !="mock2") #filtering out mock2 data
 
-transect_fun_otu_k <-transect_fun_otu [,-c(1,2,3,4,5,6)] 
+## Formatting dataset so it is ready for the nmds
+transect_fun_otu_k <-transect_fun_otu [,-c(1,2,3,4,5,6)] #taking out extra columns
 long.t <- melt(transect_fun_otu_k) # making wide to long
 colnames(long.t) <-c("site", "spp", "value")
 long.t_here <- long.t %>%
@@ -151,7 +102,6 @@ m1 <- metaMDS(short, distance = "bray", k = 3, trymax = 500,
         wascores = TRUE, expand = TRUE,
         trace = 1, plot = TRUE,)
 
-#This is the code I should need for running an ordination
 #plot ordination
 plot(m1, display = c("sites"), choices = c(1,2),
      type = "t", shrink = TRUE)
@@ -169,6 +119,40 @@ m1$species
 m1$points
 m1$ndim    
 
+## Want to make a dataset of NMDS points that can be used for graphing
+nmds.abun <-m1$points #pulling out just the scores
+nmds.abun <- as.data.frame(nmds.abun) # making it a dataframe
+nmds.abun <- add_rownames(nmds.abun, "sample") #making rownames into a column
+nmds.abun <- as.data.frame(nmds.abun) #making it a dataframe again
+nmds.abun<- nmds.abun %>%
+	separate(sample, c("habitat", "spp", "rep"),"_") #split grouping column
+
+write.csv(nmds.abun, "/Users/laura/Desktop/Writing Projects/MUD transition/R/Results/NMDS_Abundance_Scores_MUDtrans_20180621.csv")
+
+##---------------------------------------------------
+## Graphing the NMDS of fungal soil abundance
+##---------------------------------------------------
+
+#### ~*~*~ Figure Edit Wish List ~*~*~
+## I'd like to control (manually pick) the colors of the habitats
+## control (manually pick) the shapes of species
+## Make a single legend that represents both species and habitat
+## Make a similar graph with MDS1 and MDS2 and put the two graphs in a panel together
+
+
+abun <-ggplot(nmds.abun, aes(x=MDS1, y=MDS2, fill = habitat, shape = spp)) +
+	geom_point(aes(colour=habitat)) +
+	theme_classic () +
+	ylab("NMDS 2") +
+	xlab("NMDS 1") +
+	scale_fill_manual(values = c("red", "black", "orange")) + #this doesn't work
+	theme(axis.text.y = element_text(size=14),
+		axis.text.x = element_text(size = 14),
+		axis.title.y = element_text(size = 16, face = "plain"),
+		axis.title.x = element_text(size = 16, face = "plain"),
+		panel.border = element_rect(colour ="black", size = 1, fill=NA)
+		)
+abun
 
 
 #--------------------ADONIS--------------------------
@@ -253,6 +237,30 @@ pairwise.perm.manova(dist(data.sppwide.pa, "euclidian"), enviro$location, nperm=
 # This code compares species
 pairwise.perm.manova(dist(data.sppwide.pa, "euclidian"), enviro$spp, nperm=2000)
 # RESULTS: Nearly all species combinations are different, with the exception of BOER/PLJA which p=0.176
+
+## Making a dataset I can graph
+nmds.pres <-m2$points #pulling out just the scores
+nmds.pres <- as.data.frame(nmds.pres) # making it a dataframe
+nmds.pres <- add_rownames(nmds.pres, "sample") #making rownames into a column
+nmds.pres <- as.data.frame(nmds.pres) #making it a dataframe again
+nmds.pres <- nmds.pres %>%
+	separate(sample, c("habitat", "spp", "rep"),"_") #split grouping column
+
+# Graphing the Presense/Absence ordination
+# See notes above on abundance graph regarding what I'd like to fix here, too
+pres <-ggplot(nmds.pres, aes(x=MDS1, y=MDS2, fill = habitat, shape = spp)) +
+	geom_point(aes(colour=habitat)) +
+	theme_classic () +
+	ylab("NMDS 2") +
+	xlab("NMDS 1") +
+	scale_fill_manual(values = c("red", "black", "orange")) + #this doesn't work
+	theme(axis.text.y = element_text(size=14),
+		axis.text.x = element_text(size = 14),
+		axis.title.y = element_text(size = 16, face = "plain"),
+		axis.title.x = element_text(size = 16, face = "plain"),
+		panel.border = element_rect(colour ="black", size = 1, fill=NA)
+		)
+pres
 
 
 ############################# more visuals #####################################
