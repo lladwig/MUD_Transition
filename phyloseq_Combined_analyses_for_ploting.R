@@ -1,6 +1,6 @@
 rm(list=ls(all=TRUE))
-
-#####Processing conducted before hand#####
+library(phyloseq)
+#####Processing conducted before by hand#####
 #fungi
 
 MUD.fung=subset_samples(MUD.data, funct_grp=="fungi")
@@ -321,6 +321,208 @@ mmm1 <- metaMDS(MUD.data.dist, k = 3, trymax = 500,
               wascores = TRUE, expand = TRUE,
               trace = 1, plot = TRUE)
 #0.133854
+
+#let run the simper
+
+#need the OTU table
+MUD.data_otu=t(otu_table(MUD.data))
+
+colnames(MUD.data_otu)
+row.names(MUD.data_otu)
+
+#I also need the taxonomy table for extracting the classified species identity
+
+MUD.data_taxa=as.data.frame(tax_table(MUD.data))
+
+#let load in the funguild results
+funguild.80c=read.delim("MUD_fungi_OTU_ITS_VST_80c.guilds.txt",sep = "\t")
+head(funguild.80c)
+row.names(funguild.80c)=funguild.80c$X
+funguild.80c_names=funguild.80c[92:ncol(funguild.80c)]
+
+
+#Now I need to extract out the samples that have LATR
+
+MUD.data_map=sample_data(MUD.data)
+MUD.data_map_LATR=subset(MUD.data_map, Spp=="LATR")
+nrow(MUD.data_map_LATR)
+MUD.data_LATR_otu=merge(MUD.data_map_LATR,MUD.data_otu, by="row.names")
+nrow(MUD.data_LATR_otu)
+colnames(MUD.data_LATR_otu)
+
+
+MUD.data_LATR.simp <- with(MUD.data_LATR_otu, simper(MUD.data_LATR_otu[,29:ncol(MUD.data_LATR_otu)], Site,permutations=9999))
+summary(MUD.data_LATR.simp,ordered = T)
+MUD.data_LATR.simp_mat_num=as.data.frame(cbind(as.numeric(MUD.data_LATR.simp$E_S$average),as.numeric(MUD.data_LATR.simp$E_S$ava),
+                                           as.numeric(MUD.data_LATR.simp$E_S$avb),as.numeric(MUD.data_LATR.simp$E_S$p)))
+head(MUD.data_LATR.simp_mat_num)
+row.names(MUD.data_LATR.simp_mat_num)=MUD.data_LATR.simp$E_S$species
+summary(MUD.data_LATR.simp_mat_num)
+colnames(MUD.data_LATR.simp_mat_num)[c(1:4)]=c("average","av_Ecotone","av_Shrub","pval")
+(MUD.data_LATR.simp_mat_num[order(-MUD.data_LATR.simp_mat_num$average),])[1:10,]
+
+#add in the taxonomy 
+
+MUD.data_LATR.simp_taxa_mat=merge(MUD.data_LATR.simp_mat_num,MUD.data_taxa, by="row.names", all.x = T)
+head(MUD.data_LATR.simp_taxa_mat)
+#rename the species column
+colnames(MUD.data_LATR.simp_taxa_mat)[1]="OTU"
+rownames(MUD.data_LATR.simp_taxa_mat)=MUD.data_LATR.simp_taxa_mat$OTU
+MUD.data_LATR.simp_taxa_mat_sig=subset(MUD.data_LATR.simp_taxa_mat, pval<0.05)
+summary(MUD.data_LATR.simp_taxa_mat_sig)
+nrow(MUD.data_LATR.simp_taxa_mat_sig)
+MUD.data_LATR.simp_funguild_mat_sig=merge(MUD.data_LATR.simp_taxa_mat_sig,funguild.80c_names, by="row.names")
+write.csv(MUD.data_LATR.simp_funguild_mat_sig, "MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv")
+
+#To start out, let's take the the top 10 that explain the most variation
+
+MUD.data_LATR.simp_taxa_mat_sig_top10=(MUD.data_LATR.simp_taxa_mat_sig[order(-MUD.data_LATR.simp_taxa_mat_sig$average),])[1:10,]
+rownames(MUD.data_LATR.simp_taxa_mat_sig_top10)
+
+
+
+
+
+#Now I need to extract out the samples that have Ecotone
+
+MUD.data_map=sample_data(MUD.data)
+MUD.data_map_Ecotone=subset(MUD.data_map, Location=="Ecotone")
+nrow(MUD.data_map_Ecotone)
+
+
+MUD.data_map_Ecotone_otu=merge(MUD.data_map_Ecotone,MUD.data_otu, by="row.names")
+nrow(MUD.data_map_Ecotone_otu)
+colnames(MUD.data_map_Ecotone_otu)
+
+MUD.data_map_Ecotone.simp <- with(MUD.data_map_Ecotone_otu, simper(MUD.data_map_Ecotone_otu[,29:ncol(MUD.data_map_Ecotone_otu)], Spp,permutations=9999))
+summary(MUD.data_map_Ecotone.simp,ordered = T)
+
+#In Ecotone BOER compared to LATR
+MUD.data_map_Ecotone.simp_mat_BOER_LATR=as.data.frame(cbind(as.numeric(MUD.data_map_Ecotone.simp$BOER_LATR$average),as.numeric(MUD.data_map_Ecotone.simp$BOER_LATR$ava),
+                                               as.numeric(MUD.data_map_Ecotone.simp$BOER_LATR$avb),as.numeric(MUD.data_map_Ecotone.simp$BOER_LATR$p)))
+head(MUD.data_map_Ecotone.simp_mat_BOER_LATR)
+row.names(MUD.data_map_Ecotone.simp_mat_BOER_LATR)=MUD.data_map_Ecotone.simp$BOER_LATR$species
+summary(MUD.data_map_Ecotone.simp_mat_BOER_LATR)
+colnames(MUD.data_map_Ecotone.simp_mat_BOER_LATR)[c(1:4)]=c("average","av_BEOR","av_LATR","pval")
+(MUD.data_map_Ecotone.simp_mat_BOER_LATR[order(-MUD.data_map_Ecotone.simp_mat_BOER_LATR$average),])[1:10,]
+
+#add in the taxonomy 
+
+MUD.data_map_Ecotone.simp_taxa_BOER_LATR=merge(MUD.data_map_Ecotone.simp_mat_BOER_LATR,MUD.data_taxa, by="row.names", all.x = T)
+head(MUD.data_map_Ecotone.simp_taxa_BOER_LATR)
+#rename the species column
+colnames(MUD.data_map_Ecotone.simp_taxa_BOER_LATR)[1]="OTU"
+rownames(MUD.data_map_Ecotone.simp_taxa_BOER_LATR)=MUD.data_map_Ecotone.simp_taxa_BOER_LATR$OTU
+MUD.data_map_Ecotone.simp_taxa_BOER_LATR_sig=subset(MUD.data_map_Ecotone.simp_taxa_BOER_LATR, pval<0.05)
+summary(MUD.data_map_Ecotone.simp_taxa_BOER_LATR_sig)
+nrow(MUD.data_map_Ecotone.simp_taxa_BOER_LATR_sig)
+#504
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig=merge(MUD.data_map_Ecotone.simp_taxa_BOER_LATR_sig,funguild.80c_names, by="row.names")
+write.csv(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig, "MUD_sig_simper_fungi_80c_Ecotone_BEOR_LATR.csv")
+
+#To start out, let's take the the top 10 that explain the most variation
+
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top10=(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig[order(-MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig$average),])[1:10,]
+rownames(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top10)
+
+#In Ecotone PLJA compared to LATR
+MUD.data_map_Ecotone.simp_mat_LATR_PLJA=as.data.frame(cbind(as.numeric(MUD.data_map_Ecotone.simp$LATR_PLJA$average),as.numeric(MUD.data_map_Ecotone.simp$LATR_PLJA$ava),
+                                                            as.numeric(MUD.data_map_Ecotone.simp$LATR_PLJA$avb),as.numeric(MUD.data_map_Ecotone.simp$LATR_PLJA$p)))
+head(MUD.data_map_Ecotone.simp_mat_LATR_PLJA)
+row.names(MUD.data_map_Ecotone.simp_mat_LATR_PLJA)=MUD.data_map_Ecotone.simp$LATR_PLJA$species
+summary(MUD.data_map_Ecotone.simp_mat_LATR_PLJA)
+colnames(MUD.data_map_Ecotone.simp_mat_LATR_PLJA)[c(1:4)]=c("average","av_LATR","av_PLJA","pval")
+(MUD.data_map_Ecotone.simp_mat_LATR_PLJA[order(-MUD.data_map_Ecotone.simp_mat_LATR_PLJA$average),])[1:10,]
+
+#add in the taxonomy 
+
+MUD.data_map_Ecotone.simp_taxa_LATR_PLJA=merge(MUD.data_map_Ecotone.simp_mat_LATR_PLJA,MUD.data_taxa, by="row.names", all.x = T)
+head(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA)
+#rename the species column
+colnames(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA)[1]="OTU"
+rownames(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA)=MUD.data_map_Ecotone.simp_taxa_LATR_PLJA$OTU
+MUD.data_map_Ecotone.simp_taxa_LATR_PLJA_sig=subset(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA, pval<0.05)
+summary(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA_sig)
+nrow(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA_sig)
+#449
+MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig=merge(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA_sig,funguild.80c_names, by="row.names")
+write.csv(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig, "MUD_sig_simper_fungi_80c_Ecotone_LATR_PLJA.csv")
+
+
+
+#Now I need to extract out the samples that have BOER
+
+MUD.data_map=sample_data(MUD.data)
+MUD.data_map_BOER=subset(MUD.data_map, Spp=="BOER")
+nrow(MUD.data_map_BOER)
+MUD.data_map_BOER_otu=merge(MUD.data_map_BOER,MUD.data_otu, by="row.names")
+nrow(MUD.data_map_BOER_otu)
+colnames(MUD.data_map_BOER_otu)
+
+
+MUD.data_BOER.simp <- with(MUD.data_map_BOER_otu, simper(MUD.data_map_BOER_otu[,29:ncol(MUD.data_map_BOER_otu)], Site,permutations=9999))
+summary(MUD.data_BOER.simp,ordered = T)
+MUD.data_BOER.simp_num=as.data.frame(cbind(as.numeric(MUD.data_BOER.simp$E_G$average),as.numeric(MUD.data_BOER.simp$E_G$ava),
+                                               as.numeric(MUD.data_BOER.simp$E_G$avb),as.numeric(MUD.data_BOER.simp$E_G$p)))
+head(MUD.data_BOER.simp_num)
+row.names(MUD.data_BOER.simp_num)=MUD.data_BOER.simp$E_G$species
+summary(MUD.data_BOER.simp_num)
+colnames(MUD.data_BOER.simp_num)[c(1:4)]=c("average","av_Ecotone","av_Grassland","pval")
+(MUD.data_BOER.simp_num[order(-MUD.data_BOER.simp_num$average),])[1:10,]
+
+#add in the taxonomy 
+
+MUD.data_BOER.simp_taxa=merge(MUD.data_BOER.simp_num,MUD.data_taxa, by="row.names", all.x = T)
+head(MUD.data_BOER.simp_taxa)
+#rename the species column
+colnames(MUD.data_BOER.simp_taxa)[1]="OTU"
+rownames(MUD.data_BOER.simp_taxa)=MUD.data_BOER.simp_taxa$OTU
+MUD.data_BOER.simp_taxa_sig=subset(MUD.data_BOER.simp_taxa, pval<0.05)
+summary(MUD.data_BOER.simp_taxa_sig)
+nrow(MUD.data_BOER.simp_taxa_sig)
+MUD.data_BOER.simp_funguild_sig=merge(MUD.data_BOER.simp_taxa_sig,funguild.80c_names, by="row.names")
+write.csv(MUD.data_BOER.simp_funguild_sig, "MUD_sig_simper_fungi_80c_BOER_Eco_V_Grassland.csv")
+
+#Now I need to extract out the samples that have PLJA
+
+MUD.data_map=sample_data(MUD.data)
+MUD.data_map_PLJA=subset(MUD.data_map, Spp=="PLJA")
+nrow(MUD.data_map_PLJA)
+MUD.data_map_PLJA_otu=merge(MUD.data_map_PLJA,MUD.data_otu, by="row.names")
+nrow(MUD.data_map_PLJA_otu)
+colnames(MUD.data_map_PLJA_otu)
+
+
+MUD.data_PLJA.simp <- with(MUD.data_map_PLJA_otu, simper(MUD.data_map_PLJA_otu[,29:ncol(MUD.data_map_PLJA_otu)], Site,permutations=9999))
+summary(MUD.data_PLJA.simp,ordered = T)
+MUD.data_PLJA.simp_num=as.data.frame(cbind(as.numeric(MUD.data_PLJA.simp$E_G$average),as.numeric(MUD.data_PLJA.simp$E_G$ava),
+                                           as.numeric(MUD.data_PLJA.simp$E_G$avb),as.numeric(MUD.data_PLJA.simp$E_G$p)))
+head(MUD.data_PLJA.simp_num)
+row.names(MUD.data_PLJA.simp_num)=MUD.data_PLJA.simp$E_G$species
+summary(MUD.data_PLJA.simp_num)
+colnames(MUD.data_PLJA.simp_num)[c(1:4)]=c("average","av_Ecotone","av_Grassland","pval")
+(MUD.data_PLJA.simp_num[order(-MUD.data_PLJA.simp_num$average),])[1:10,]
+
+#add in the taxonomy 
+
+MUD.data_PLJA.simp_taxa=merge(MUD.data_PLJA.simp_num,MUD.data_taxa, by="row.names", all.x = T)
+head(MUD.data_PLJA.simp_taxa)
+#rename the species column
+colnames(MUD.data_PLJA.simp_taxa)[1]="OTU"
+rownames(MUD.data_PLJA.simp_taxa)=MUD.data_PLJA.simp_taxa$OTU
+MUD.data_PLJA.simp_taxa_sig=subset(MUD.data_PLJA.simp_taxa, pval<0.05)
+summary(MUD.data_PLJA.simp_taxa_sig)
+nrow(MUD.data_PLJA.simp_taxa_sig)
+MUD.data_PLJA.simp_funguild_sig=merge(MUD.data_PLJA.simp_taxa_sig,funguild.80c_names, by="row.names")
+write.csv(MUD.data_PLJA.simp_funguild_sig, "MUD_sig_simper_fungi_80c_PLJA_Eco_V_Grassland.csv")
+
+
+
+#To start out, let's take the the top 10 that explain the most variation
+
+MUD.data_LATR.simp_taxa_mat_sig_top10=(MUD.data_LATR.simp_taxa_mat_sig[order(-MUD.data_LATR.simp_taxa_mat_sig$average),])[1:10,]
+rownames(MUD.data_LATR.simp_taxa_mat_sig_top10)
+
 
 ############### MORE SOIL CHARACTERISTICS ##################################
 MUD.data_map=sample_data(MUD.data)
