@@ -115,6 +115,7 @@ library(car) #for correct ANOVA table
 library(ggrepel)
 library(RVAideMemoire) # for tests after PERMANOVA
 library(emmeans)
+library("seqinr")
 options(contrasts=c("contr.sum", "contr.poly"))
 pa=function(x)(ifelse(x>0,1,0))
 eea <-read.csv("EEA_MUD_transition.csv")
@@ -290,6 +291,8 @@ MUD.data.ord <- ordinate(MUD.data, method="NMDS",distance = "bray")
 
 plot_ordination(MUD.data, MUD.data.ord)
 MUD.data_map=sample_data(MUD.data)
+nrow(MUD.data_map)
+#56
 MUD.data_ord_points=merge(MUD.data.ord$points,MUD.data_map,by="row.names")
 colnames(MUD.data_ord_points)
 spp_pos=c("Bogr","Boer",  "Plja", "Latr")
@@ -321,6 +324,34 @@ mmm1 <- metaMDS(MUD.data.dist, k = 3, trymax = 500,
               wascores = TRUE, expand = TRUE,
               trace = 1, plot = TRUE)
 #0.133854
+
+#let's only look at the BOER and PLJA that cover two sites
+
+MUD.data_grass=subset_samples(MUD.data, Spp=="BOER"|Spp=="PLJA")
+
+MUD.data_grass.dist<-distance(MUD.data_grass,method = "bray")
+MUD.data_grass_map=sample_data(MUD.data_grass)
+nrow(MUD.data_grass_map)
+#32
+unique(MUD.data_grass_map$Spp)
+test_perm_grass <- adonis (MUD.data_grass.dist ~ MUD.data_grass_map$Location * MUD.data_grass_map$Spp, permutations=10000)
+print(test_perm_grass)
+# I *think* this code is a quasi post-hoc test that will compare the locations
+#pairwise.perm.manova(MUD.data.dist, MUD.data_map$Location, nperm=2000)
+
+#Let's compare the species that occur only in the ecotone...
+
+MUD.data_ecotone=subset_samples(MUD.data, Location=="Ecotone")
+
+MUD.data_ecotone.dist<-distance(MUD.data_ecotone,method = "bray")
+MUD.data_ecotone_map=sample_data(MUD.data_ecotone)
+nrow(MUD.data_ecotone_map)
+#24
+unique(MUD.data_ecotone_map$Spp)
+unique(MUD.data_ecotone_map$Location)
+test_perm_ecotone <- adonis (MUD.data_ecotone.dist ~  MUD.data_ecotone_map$Spp, permutations=10000)
+print(test_perm_ecotone)
+pairwise.perm.manova(MUD.data_ecotone.dist, MUD.data_ecotone_map$Spp, nperm=2000)
 
 #let run the simper
 
@@ -522,6 +553,43 @@ write.csv(MUD.data_PLJA.simp_funguild_sig, "MUD_sig_simper_fungi_80c_PLJA_Eco_V_
 
 MUD.data_LATR.simp_taxa_mat_sig_top10=(MUD.data_LATR.simp_taxa_mat_sig[order(-MUD.data_LATR.simp_taxa_mat_sig$average),])[1:10,]
 rownames(MUD.data_LATR.simp_taxa_mat_sig_top10)
+
+#We need a fasta file with the sequences from the SIMPER sig OTUs
+
+#need to load in the csv files we created above
+
+MUD.data_PLJA.simp_funguild_sig=read.csv("MUD_sig_simper_fungi_80c_PLJA_Eco_V_Grassland.csv")
+MUD.data_BOER.simp_funguild_sig=read.csv("MUD_sig_simper_fungi_80c_BOER_Eco_V_Grassland.csv")
+MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig=read.csv("MUD_sig_simper_fungi_80c_Ecotone_LATR_PLJA.csv")
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig=read.csv("MUD_sig_simper_fungi_80c_Ecotone_BEOR_LATR.csv")
+MUD.data_LATR.simp_funguild_mat_sig=read.csv("MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv")
+
+head(MUD.data_PLJA.simp_funguild_sig)
+MUD.data_simper_OTU=c(as.character(MUD.data_PLJA.simp_funguild_sig$OTU),as.character(MUD.data_BOER.simp_funguild_sig$OTU),
+                      as.character(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig$OTU),
+                      as.character(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig$OTU),as.character(MUD.data_LATR.simp_funguild_mat_sig$OTU))
+
+length(MUD.data_simper_OTU)
+#1253
+
+#remove duplicated OTUs
+
+MUD.data_simper_OTU_unq=unique(MUD.data_simper_OTU)
+length(MUD.data_simper_OTU_unq)
+#1107
+anyDuplicated(MUD.data_simper_OTU_unq)
+
+rep_set.fung<- read.fasta(file = "uniques_fwd_reads_demux_nophix_cut_fil_otus.fa", as.string = TRUE, set.attributes = FALSE)
+
+head(rep_set.fung)
+length(rep_set.fung)
+#4987
+rep_set_simper_OTUs=rep_set.fung[names(rep_set.fung) %in% MUD.data_simper_OTU_unq]
+head(rep_set_simper_OTUs)
+length(rep_set_simper_OTUs)
+#1107
+write.fasta(sequences =rep_set_simper_OTUs, names = names(rep_set_simper_OTUs), file.out ="MUD.data_simper_OTU_rep_set.fna")
+
 
 
 ############### MORE SOIL CHARACTERISTICS ##################################
