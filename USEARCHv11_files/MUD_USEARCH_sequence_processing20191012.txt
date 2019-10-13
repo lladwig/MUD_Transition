@@ -1,0 +1,672 @@
+#uploaded the zip files from desktop
+
+#need to extract the files
+cd /mnt/home/belldere/MUD_SequenceData/
+unzip MUD_SequenceData-20170930T190807Z-001.zip
+
+#starting with bacteria
+
+mv /mnt/home/belldere/MUD_SequenceData/MUD_SequenceData/bacteria /mnt/home/belldere/MUD_SequenceData/16s_MUD/
+mv /mnt/home/belldere/MUD_SequenceData/MUD_SequenceData/bacteria_SampleCode.txt /mnt/home/belldere/MUD_SequenceData/16s_MUD/
+mv /mnt/home/belldere/MUD_SequenceData/MUD_SequenceData/map_515F-806R_Ladwig.txt /mnt/home/belldere/MUD_SequenceData/16s_MUD/
+
+
+cd /mnt/home/belldere/MUD_SequenceData/16s_MUD/
+
+mkdir QC
+mkdir TrimFastq16S
+cd TrimFastq16S
+mkdir paired
+mkdir unpaired
+
+#lets look at the sequence quality
+cd /mnt/home/belldere/MUD_SequenceData/16s_MUD/bacteria/
+
+
+module load GNU/4.8.3
+module load FastQC
+
+fastqc *.fq
+
+#this did not work because these seem to not be fastq....
+module load GNU/4.9
+module load OpenMPI/1.10.0
+module load mothur
+
+summary.seqs(fasta=/mnt/home/belldere/MUD_SequenceData/16s_MUD/bacteria/bac_Ecotone_BOER_1.fq, processors=4)
+#Using 4 processors.
+
+#                Start   End     NBases  Ambigs  Polymer NumSeqs
+#Minimum:        1       299     299     0       4       1
+#2.5%-tile:      1       301     301     0       4       2
+#25%-tile:       1       301     301     0       5       12
+#Median:         1       301     301     0       5       23
+#75%-tile:       1       301     301     0       6       34
+#97.5%-tile:     1       301     301     2       8       43
+#Maximum:        1       307     307     2       8       44
+#Mean:   1       301.091 301.091 0.113636        5.20455
+## of Seqs:      44
+
+#Output File Names:
+#/mnt/home/belldere/MUD_SequenceData/16s_MUD/bacteria/bac_Ecotone_BOER_1.summary
+
+summary.seqs(fasta=/mnt/home/belldere/MUD_SequenceData/16s_MUD/bacteria/bac_SPEGAR_BOGR_2A.fq, processors=4)
+
+#                Start   End     NBases  Ambigs  Polymer NumSeqs
+#Minimum:        1       301     301     0       3       1
+#2.5%-tile:      1       301     301     0       4       15
+#25%-tile:       1       301     301     0       5       141
+#Median:         1       301     301     0       5       281
+#75%-tile:       1       301     301     0       5       421
+#97.5%-tile:     1       301     301     5       8       547
+#Maximum:        1       301     301     6       11      560
+#Mean:   1       301     301     0.298214        5.21607
+## of Seqs:      560
+
+#Output File Names:
+#/mnt/home/belldere/MUD_SequenceData/16s_MUD/bacteria/bac_SPEGAR_BOGR_2A.summary
+
+
+#Create a single file containing reads from all samples. These sequences will be labelled by their sample ID.
+
+export PATH="/mnt/research/EvansLab/Software/anaconda2/bin:$PATH"
+add_qiime_labels.py -i bacteria/ -m bacteria_Map.txt -c InputFastaFileName -n 1
+
+#Check sequences in total
+
+mothur
+
+summary.seqs(fasta=/mnt/home/belldere/MUD_SequenceData/16s_MUD/combined_seq.fna, processors=4)
+#                Start   End     NBases  Ambigs  Polymer NumSeqs
+#Minimum:        1       299     299     0       3       1
+#2.5%-tile:      1       301     301     0       4       100
+#25%-tile:       1       301     301     0       4       991
+#Median:         1       301     301     0       5       1982
+#75%-tile:       1       301     301     0       5       2972
+#97.5%-tile:     1       301     301     3       8       3863
+#Maximum:        1       307     307     6       14      3962
+#Mean:   1       301.001 301.001 0.297072        5.0583
+## of Seqs:      3962
+
+
+#lets look at the sequence quality Undetermined_S0_L001_I1_001.fastq
+cd /mnt/home/belldere/MUD_SequenceData/
+
+
+module load GNU/4.8.3
+module load FastQC
+
+fastqc Undetermined_S0_L001_I1_001.fastq
+
+unzip Undetermined_S0_L001_I1_001.fastq.zip
+replace Undetermined_S0_L001_I1_001.fastq? [y]es, [n]o, [A]ll, [N]one, [r]ename: r
+new name: unzip_Undetermined_S0_L001_I1_001.fastq
+#both files are have sequences that are 12 bp
+
+#FUNGI
+#Create a single file containing reads from all fungi samples. These sequences will be labelled by their sample ID.
+
+cd /mnt/home/belldere/MUD_SequenceData/MUD_SequenceData/
+
+export PATH="/mnt/research/EvansLab/Software/anaconda2/bin:$PATH"
+add_qiime_labels.py -i fungi/ -m fungi/fungi_Map.txt -c InputFastaFileName -n 1
+
+#renamed it fungi_combined_seqs.fna
+
+#Check sequences in total
+module load GNU/4.9
+module load OpenMPI/1.10.0
+module load mothur
+
+mothur
+
+summary.seqs(fasta=fungi_combined_seqs.fna, processors=4)
+
+#Using 4 processors.
+
+#                Start   End     NBases  Ambigs  Polymer NumSeqs
+#Minimum:        1       301     301     0       3       1
+#2.5%-tile:      1       301     301     0       4       263814
+#25%-tile:       1       301     301     0       5       2638132
+#Median:         1       301     301     0       5       5276263
+#75%-tile:       1       301     301     0       6       7914394
+#97.5%-tile:     1       301     301     3       10      10288711
+#Maximum:        1       612     612     13      301     10552524
+#Mean:   1       301     301     0.271065        5.68639
+## of Seqs:      10552524
+
+#Output File Names:
+#fungi_combined_seqs.summary
+
+#It took 36 secs to summarize 10552524 sequences.
+
+#lets look at the sequence quality Undetermined_S0_L001_R2_001.fastq.zip
+cd /mnt/home/belldere/MUD_SequenceData/
+
+unzip Undetermined_S0_L001_R2_001.fastq.zip
+#Archive:  Undetermined_S0_L001_R2_001.fastq.zip
+#warning [Undetermined_S0_L001_R2_001.fastq.zip]:  4294967296 extra bytes at beginning or within zipfile
+#  (attempting to process anyway)
+#file #1:  bad zipfile offset (local header sig):  4294967296
+#  (attempting to re-compensate)
+#  inflating: Undetermined_S0_L001_R2_001.fastq
+#  error:  invalid compressed data to inflate
+# bad CRC 468ccc16  (should be 95c6a16a)
+#file #2:  bad zipfile offset (local header sig):  700137246
+#  (attempting to re-compensate)
+#replace __MACOSX/._Undetermined_S0_L001_R2_001.fastq? [y]es, [n]o, [A]ll, [N]one, [r]ename: y
+#  inflating: __MACOSX/._Undetermined_S0_L001_R2_001.fastq
+
+
+
+
+module load GNU/4.8.3
+module load FastQC
+
+fastqc Undetermined_S0_L001_R2_001.fastq
+#Undetermined_S0_L001_R2_001.fastq = 18,913,331 reads
+gunzip Undetermined_S0_L001_R1_001.fastq.gz
+#Undetermined_S0_L001_R1_001.fastq = 18,913,331 reads
+
+export PATH="/mnt/research/EvansLab/Software/anaconda3/bin:$PATH"
+source activate qiime2-2017.9
+
+join_paired_ends.py -f /mnt/home/belldere/MUD_SequenceData/Undetermined_S0_L001_R1_001.fastq -r /mnt/home/belldere/MUD_SequenceData/Undetermined_S0_L001_R2_001.fastq -b /mnt/home/belldere/MUD_SequenceData/Undetermined_S0_L001_I1_001.fastq -o /mnt/home/belldere/MUD_SequenceData/joined_file
+
+#checking out the sequences
+mkdir fastq_info
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastx_info fastqjoin.join.fastq -output fastq_info/fastqjoin.join_reads_info.txt
+#File size 2.9G, 3.6M seqs, 1.4G letters and quals
+#Lengths min 301, low 345, med 367, hi 394, max 596
+#Letter freqs A 28.8%, T 25.8%, G 22.7%, C 22.7%, N 0.088%
+#0% masked (lower-case)
+#ASCII_BASE=33
+#EE mean 0.8; min 0.0, low 0.1, med 0.3, hi 1.0, max 43.8
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastq_eestats2 fastqjoin.join.fastq -output fastq_info/fastqjoin.join_eestats2.txt
+
+#3637339 reads, max len 596, avg 371.8
+
+#Length         MaxEE 0.50         MaxEE 1.00         MaxEE 2.00
+#------   ----------------   ----------------   ----------------
+#    50    3614635( 99.4%)    3636321(100.0%)    3637320(100.0%)
+#   100    3533238( 97.1%)    3623113( 99.6%)    3636662(100.0%)
+#   150    3447868( 94.8%)    3598541( 98.9%)    3633992( 99.9%)
+#   200    3347981( 92.0%)    3563882( 98.0%)    3628787( 99.8%)
+#   250    3178769( 87.4%)    3487366( 95.9%)    3614653( 99.4%)
+#   300    2909662( 80.0%)    3302977( 90.8%)    3533166( 97.1%)
+#   350    1603831( 44.1%)    2019718( 55.5%)    2358214( 64.8%)
+#   400     408933( 11.2%)     532303( 14.6%)     662351( 18.2%)
+#   450      34425(  0.9%)      49316(  1.4%)      66332(  1.8%)
+#   500       2012(  0.1%)       3686(  0.1%)       5942(  0.2%)
+#   550        152(  0.0%)        445(  0.0%)       1041(  0.0%)
+
+export PATH="/mnt/research/EvansLab/Software/anaconda3/bin:$PATH"
+source activate qiime2-2017.9
+
+split_libraries_fastq.py -i fastqjoin.join.fastq -b fastqjoin.join_barcodes.fastq -m combined_map.txt -o split_file/
+
+#ended up with only 756200 sequences, wow these are bad quality sequences
+
+#I am going to try merging using usearch 
+
+#first demultiplex the files
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastx_demux Undetermined_S0_L001_R1_001.fastq -reverse Undetermined_S0_L001_R2_001.fastq -index Undetermined_S0_L001_I1_001.fastq -barcodes combined_barcode.fa -fastqout fwd_demux.fastq -output2 rev_demux.fastq
+
+#---Fatal error---
+#Cannot convert FASTA to FASTQ
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastx_demux fastqjoin.join.fastq -index Undetermined_S0_L001_I1_001.fastq -barcodes combined_barcode.fa -fastqout usearch_demultiplex/reads_demux.fq
+---Fatal error---
+Label mismatch read=M01315:127:000000000-ADV50:1:1101:16559:2058 1:N:0:0, index=M01315:127:000000000-ADV50:1:1101:17700:1817 1:N:0:0
+
+
+####Start of only using the forward reads
+
+mkdir forward_reads
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastx_demux Undetermined_S0_L001_R1_001.fastq -index Undetermined_S0_L001_I1_001.fastq -barcodes combined_barcode.fa -fastqout forward_reads/fwd_reads_demux.fq
+
+#05:21 76Mb    100.0% Demuxed 5330416 / 18913331 (28.2%)
+
+
+#I am going to trying the phix removal step using bowtie
+
+module load GNU/4.4.5
+module load bowtie2/2.3.1
+
+#dowloaded phix_index-master.zip from https://github.com/GLBRC-TeamMicrobiome/phix_index
+
+unzip phix_index-master.zip
+
+mkdir no_phix
+
+#code from https://github.com/GLBRC-TeamMicrobiome/ITS-amplicon-pipeline/blob/master/ITS-amplicon-pipeline.md
+#-x is is the index to be aligned to 
+#-U user imput or your sequences to be filtered
+#-t is time that the alignment is taking
+#-p number of alignment threads to launch
+#--un write unpaired reads that didn't align to 
+#-S sam standard output
+
+
+bowtie2 -x phix_index-master/my_phix -U Undetermined_S0_L001_R1_001.fastq -t -p 5 --un no_phix/Undetermined_S0_L001_R1_001_nophix.fastq -S no_phix/Undetermined_S0_L001_R1_001.contaminated_align.sam 2> no_phix/Undetermined_S0_L001_R1_001_nophix.log
+
+
+"18913331 reads; of these:
+  18913331 (100.00%) were unpaired; of these:
+    15808791 (83.59%) aligned 0 times
+    3104540 (16.41%) aligned exactly 1 time
+    0 (0.00%) aligned >1 times
+16.41% overall alignment rate
+Time searching: 00:07:52
+Overall time: 00:07:52
+"
+
+forward_reads/fwd_reads_demux.fq
+
+bowtie2 -x phix_index-master/my_phix -U forward_reads/fwd_reads_demux.fq -t -p 5 --un no_phix/fwd_reads_demux_nophix.fq -S no_phix/fwd_reads_demux.contaminated_align.sam 2> no_phix/fwd_reads_demux_nophix.log
+
+"Multiseed full-index search: 00:02:19
+5330416 reads; of these:
+  5330416 (100.00%) were unpaired; of these:
+    5226816 (98.06%) aligned 0 times
+    103600 (1.94%) aligned exactly 1 time
+    0 (0.00%) aligned >1 times
+1.94% overall alignment rate
+Time searching: 00:02:19
+Overall time: 00:02:19
+"
+
+#Let's run the USEARCH version of phix removal
+#https://www.drive5.com/usearch/manual/cmd_filter_phix.html
+
+mkdir no_phix_USEARCH
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -filter_phix forward_reads/fwd_reads_demux.fq -output no_phix_USEARCH/fwd_reads_demux_phix_filtered.fq -alnout no_phix_USEARCH/fwd_reads_demux_phix_hits.txt
+#00:58 882Mb   100.0% Filtering for phix, 114082 hits (2.1%)
+
+
+#let's use the USEARCH primer remover
+#https://www.drive5.com/usearch/manual/cmd_fastx_trim_primer.html
+
+#make a fasta file with primers
+nano forward_reads/Taylor_primers.fa
+>939F  
+TTGACGGGGGCCCGCACAAG
+>5.8S-Fun 
+AACTTTYRRCAAYGGATCWCT
+
+mkdir USEARCHv11
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastx_trim_primer no_phix_USEARCH/fwd_reads_demux_phix_filtered.fq -db forward_reads/Taylor_primers.fa -strand both  -maxdiffs 5 -width 8 -fastqout USEARCHv11/fwd_reads_demux_phix_filtered_trimmed_reads.fq -tabbedout USEARCHv11/fwd_reads_demux_phix_filtered_trimmed_reads_primer_remove.txt
+
+
+
+#Check the quality of the sequences 
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastq_eestats2 USEARCHv11/fwd_reads_demux_phix_filtered_trimmed_reads.fq -output USEARCHv11/fwd_reads_demux_phix_filtered_trimmed_reads_eestats2.txt
+
+#there were no primers
+
+#check sample names 
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastx_get_sample_names no_phix_USEARCH/fwd_reads_demux_phix_filtered.fq -output USEARCHv11/fwd_reads_demux_phix_filtered_sampl_names.txt
+
+#00:20 38Mb    100.0% 178 samples found
+
+
+#Check the quality of the sequences 
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastq_eestats2 no_phix_USEARCH/fwd_reads_demux_phix_filtered.fq -output USEARCHv11/fwd_reads_demux_phix_filtered_eestats2.txt
+
+"5216334 reads, max len 301, avg 301.0
+
+Length         MaxEE 0.50         MaxEE 1.00         MaxEE 2.00
+------   ----------------   ----------------   ----------------
+    50    4785001( 91.7%)    5191827( 99.5%)    5216290(100.0%)
+   100    3655270( 70.1%)    4250100( 81.5%)    4818059( 92.4%)
+   150    2975285( 57.0%)    3630645( 69.6%)    4268179( 81.8%)
+   200    2051749( 39.3%)    2846562( 54.6%)    3652789( 70.0%)
+   250     925939( 17.8%)    1709749( 32.8%)    2724598( 52.2%)
+   300     207108(  4.0%)     592435( 11.4%)    1416616( 27.2%)
+"
+
+   
+#Filtering and Truncate the merged seqs to MaxEE and set length using fastq_filter
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastq_filter no_phix_USEARCH/fwd_reads_demux_phix_filtered.fq -fastq_maxee 1 -fastq_trunclen 150 -fastaout USEARCHv11/fwd_reads_demux_phix_filtered_fil.fa
+
+"00:31 628Mb   100.0% Filtering, 69.6% passed
+   5216334  Reads (5.2M)
+         0  Discarded reads length < 150
+   1585689  Discarded reads with expected errs > 1.00
+   3630645  Filtered reads (3.6M, 69.6%)
+
+"
+
+#Filter so we only have unique sequences with fastx_uniques
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastx_uniques USEARCHv11/fwd_reads_demux_phix_filtered_fil.fa  -fastaout USEARCHv11/uniques_fwd_reads_demux_phix_filtered_fil.fa -sizeout
+
+#00:09 2.0Gb  3630645 seqs, 648384 uniques, 519937 singletons (80.2%)
+#00:09 2.0Gb  Min size 1, median 1, max 85030, avg 5.60
+#00:14 2.0Gb   100.0% Writing USEARCHv11/uniques_fwd_reads_demux_phix_filtered_f                                                                              il.fa
+
+
+
+
+#Cluster into 0.97 OTUs using UPARSE and cluster_otus
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -cluster_otus USEARCHv11/uniques_fwd_reads_demux_phix_filtered_fil.fa -otus USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa -uparseout USEARCHv11/fwd_reads_demux_phix_filtered_fil_otus_uparse.txt -relabel OTU
+
+#00:15 65Mb    100.0% 4833 OTUs, 1135 chimeras
+
+
+#Map reads back to OTUs at a 97% similarity score using otutab
+
+nano USEARCHv11/OTU_mapping_MUD.sbatch
+
+#!/bin/bash --login
+########## SBATCH Lines for Resource Request ##########
+
+#SBATCH --time=05:00:00            # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --nodes=1-2                # number of different nodes - could be an exact number or a range of nodes (same as -N)
+#SBATCH --ntasks=2                  # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --cpus-per-task=5           # number of CPUs (or cores) per task (same as -c)
+#SBATCH --mem-per-cpu=20G            # memory required per allocated CPU (or core) - amount of memory (in bytes)
+#SBATCH --job-name   log_taxa_map_OTU_MUD  # you can give your job a name for easier identification (same as -J)
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=belldere@msu.edu
+
+
+cd /mnt/home/belldere/MUD_SequenceData/
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -otutab forward_reads/fwd_reads_demux.fq -otus USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa -mapout USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU_map.txt -otutabout USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU_table.txt -biomout USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU_jsn.biom -notmatchedfq USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU_unmapped.fq -dbmatched USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU_with_sizes.fa -sizeout
+
+###
+
+sbatch USEARCHv11/OTU_mapping_MUD.sbatch
+#Submitted batch job 45423460
+
+
+#02:41:08 55Mb    100.0% Searching fwd_reads_demux.fq, 79.5% matched
+#4238866 / 5330416 mapped to OTUs (79.5%)
+#02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_table.txt
+#02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_table.txt ...done.
+#02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_jsn.biom
+#02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_jsn.biom ...done.
+
+
+#classifying taxa against the reference database
+#https://www.drive5.com/usearch/manual/cmd_sintax.html
+
+nano USEARCHv11/MUD_its_v8_16s_taxon_mapping.sbatch
+
+#!/bin/bash --login
+########## SBATCH Lines for Resource Request ##########
+
+#SBATCH --time=05:00:00            # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --nodes=1-2                # number of different nodes - could be an exact number or a range of nodes (same as -N)
+#SBATCH --ntasks=2                  # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --cpus-per-task=5           # number of CPUs (or cores) per task (same as -c)
+#SBATCH --mem-per-cpu=20G            # memory required per allocated CPU (or core) - amount of memory (in bytes)
+#SBATCH --job-name   log_taxa_class_16s_ITS_OTU_MUD  # you can give your job a name for easier identification (same as -J)
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=belldere@msu.edu
+#PBS -r n
+
+cd /mnt/home/belldere/MUD_SequenceData/
+
+
+#classifying taxa against the reference database
+#https://www.drive5.com/usearch/manual/cmd_sintax.html
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -sintax USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa -db /mnt/research/EvansLab/Databases/Silva132_release/silva_16s_v123.fa -tabbedout USEARCHv11/16s_fwd_reads_demux_phix_filtered_fil_OTU_tax_v123.sintax -strand both 
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -sintax USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa -db /mnt/research/EvansLab/Databases/UNITE_8.0/utax_reference_dataset_all_02.02.2019.udb -tabbedout USEARCHv11/ITS_fwd_reads_demux_phix_filtered_fil_OTU_tax_v8.sintax -strand both 
+
+####
+USEARCHv11/sbatch MUD_its_v8_16s_taxon_mapping.sbatch
+#Submitted batch job 45424796
+
+
+
+
+#939F  TTGACGGGGGCCCGCACAAG
+#5.8S-Fun AACTTTYRRCAAYGGATCWCT
+ 
+#Now remove any residual bases from adapter seqs using cut adapt
+
+module load cutadapt/1.8.1
+
+cutadapt -a AACTTTYRRCAAYGGATCWCT -a TTGACGGGGGCCCGCACAAG -o forward_reads/fwd_reads_demux_nophix_cut.fq no_phix/fwd_reads_demux_nophix.fq > forward_reads/cut_adpt_results_fwd_reads_demux_nophix.txt
+
+#Finished in 187.61 s (36 us/read; 1.67 M reads/minute).
+
+#=== Summary ===
+
+#Total reads processed:               5,226,816
+#Reads with adapters:                    42,519 (0.8%)
+#Reads written (passing filters):     5,226,816 (100.0%)
+
+#Total basepairs processed: 1,573,271,616 bp
+#Total written (filtered):  1,573,125,141 bp (100.0%)
+
+
+#Check to make sure the primers are stripped from the merged file before you quality filter 939F  TTGACGGGGGCCCGCACAAG and 5.8S-Fun AACTTTYRRCAAYGGATCWCT
+#https://www.drive5.com/usearch/manual/cmd_search_oligodb.html
+
+nano 939F_5.8S-Fun_primers.fa 
+
+>939F
+TTGACGGGGGCCCGCACAAG
+>5.8S-Fun
+AACTTTYRRCAAYGGATCWCT
+
+###
+
+#Since this is a hug file let's subset it so we only have a random subset of 1% 
+#https://www.drive5.com/usearch/manual/cmd_fastx_subsample.html
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastx_subsample forward_reads/fwd_reads_demux_nophix_cut.fq -sample_pct 1 -randseed 1 -fastqout forward_reads/fwd_reads_demux_nophix_cut_1_pct.fastq
+#00:14 71Mb    100.0% Counting seqs
+#00:29 92Mb    100.0% Sampling
+
+
+#now see if there are primers in the random subset 
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -search_oligodb forward_reads/fwd_reads_demux_nophix_cut_1_pct.fastq -db 939F_5.8S-Fun_primers.fa -strand both -userout fwd_reads_demux_nophix_cut_1_pct_oligo.txt -userfields query+qlo+qhi+qstrand
+
+#00:40 43Mb    100.0% Searching fwd_reads_demux_nophix_cut_1_pct.fastq, 0.0% matched
+
+#M01315:127:000000000-ADV50:1:1101:10784:13567;sample=fungi.Ecotone.LATR.6;      2       22      -
+#M01315:127:000000000-ADV50:1:1102:23070:15265;sample=fungi.SPEGAR.BOER.1A;      7       27      -
+#M01315:127:000000000-ADV50:1:1103:5848:15117;sample=fungi.SPEGAR.PLJA.4B;       277     297     -
+#M01315:127:000000000-ADV50:1:1104:6955:16509;sample=fungi.Grass.BOER.1; 248     268     -
+#M01315:127:000000000-ADV50:1:1109:7355:5069;sample=fungi.Grass.BOER.8;  2       22      -
+#M01315:127:000000000-ADV50:1:1111:7504:3781;sample=fungi.Shrub.LATR.1;  228     248     -
+#M01315:127:000000000-ADV50:1:1112:14898:16544;sample=fungi.Ecotone.BOER.3;      228     248     -
+#M01315:127:000000000-ADV50:1:1112:15379:17239;sample=fungi.SPEGAR.BOER.3A;      7       27      -
+#M01315:127:000000000-ADV50:1:1114:5573:15472;sample=fungi.SPEGAR.BOGR.2B;       2       22      -
+#M01315:127:000000000-ADV50:1:1114:15511:19239;sample=fungi.Shrub.LATR.4;        3       23      -
+#M01315:127:000000000-ADV50:1:1117:3424:18452;sample=fungi.SPEGAR.ARPU.1B;       278     298     -
+#M01315:127:000000000-ADV50:1:1119:15338:6703;sample=fungi.SPEGAR.PLJA.1B;       3       23      -
+#M01315:127:000000000-ADV50:1:2104:24156:5325;sample=fungi.Shrub.LATR.6; 228     248     -
+#M01315:127:000000000-ADV50:1:2105:15169:14018;sample=fungi.SPEGAR.BOER.1B;      2       22      -
+#M01315:127:000000000-ADV50:1:2106:12777:5127;sample=fungi.SPEGAR.ARPU.1A;       171     191     -
+#M01315:127:000000000-ADV50:1:2106:16541:12936;sample=fungi.Ecotone.BOER.4;      2       22      -
+#M01315:127:000000000-ADV50:1:2107:26294:9418;sample=fungi.Grass.BOER.7; 2       22      -
+#M01315:127:000000000-ADV50:1:2107:26431:12641;sample=fungi.SPEGAR.BOER.4A;      7       27      -
+#M01315:127:000000000-ADV50:1:2111:21810:10598;sample=fungi.Grass.PLJA.6;        2       22      -
+#M01315:127:000000000-ADV50:1:2112:20802:20796;sample=fungi.SPEGAR.PLJA.3B;      228     248     -
+#M01315:127:000000000-ADV50:1:2113:11193:13021;sample=fungi.Grass.PLJA.6;        3       23      -
+#M01315:127:000000000-ADV50:1:2115:20243:14529;sample=fungi.SPEGAR.BOER.4B;      3       23      -
+#M01315:127:000000000-ADV50:1:2117:12770:15180;sample=fungi.Grass.BOER.8;        1       21      -
+#M01315:127:000000000-ADV50:1:2118:16175:6255;sample=fungi.SPEGAR.PLJA.3B;       227     247     -
+#M01315:127:000000000-ADV50:1:2118:22036:16423;sample=fungi.Shrub.LATR.6;        228     248     -
+
+#the primer is in the reverse that means these seqs are weird?
+
+
+
+
+#check sample names 
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastx_get_sample_names forward_reads/fwd_reads_demux_nophix_cut.fq -output forward_reads/fwd_reads_demux_nophix_cut_sampl_names.txt
+
+#00:21 37Mb    100.0% 178 samples found
+
+
+#Check the quality of the sequences 
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastq_eestats2 forward_reads/fwd_reads_demux_nophix_cut.fq -output forward_reads/fwd_reads_demux_nophix_cut_eestats2.txt
+
+"5226816 reads, max len 301, avg 301.0
+
+Length         MaxEE 0.50         MaxEE 1.00         MaxEE 2.00
+------   ----------------   ----------------   ----------------
+    50    4794922( 91.7%)    5202200( 99.5%)    5226771(100.0%)
+   100    3664231( 70.1%)    4259929( 81.5%)    4828311( 92.4%)
+   150    2983192( 57.1%)    3639803( 69.6%)    4278092( 81.8%)
+   200    2057604( 39.4%)    2854032( 54.6%)    3661726( 70.1%)
+   250     928867( 17.8%)    1714052( 32.8%)    2730452( 52.2%)
+   300     207359(  4.0%)     592180( 11.3%)    1413745( 27.0%)"
+
+   
+#Filtering and Truncate the merged seqs to MaxEE and set length using fastq_filter
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastq_filter forward_reads/fwd_reads_demux_nophix_cut.fq -fastq_maxee 1 -fastq_trunclen 150 -fastaout forward_reads/fwd_reads_demux_nophix_cut_fil.fa
+
+"01:04 4.1Mb   100.0% Filtering, 69.6% passed
+   5226816  Reads (5.2M)
+         0  Discarded reads length < 150
+   1587013  Discarded reads with expected errs > 1.00
+   3639803  Filtered reads (3.6M, 69.6%)
+"
+
+#Filter so we only have unique sequences with fastx_uniques
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -fastx_uniques forward_reads/fwd_reads_demux_nophix_cut_fil.fa  -fastaout forward_reads/uniques_fwd_reads_demux_nophix_cut_fil.fa -sizeout
+
+#00:12 1.2Gb  3639803 seqs, 655108 uniques, 525932 singletons (80.3%)
+#00:12 1.2Gb  Min size 1, median 1, max 85030, avg 5.56
+#00:13 1.2Gb   100.0% Writing forward_reads/uniques_fwd_reads_demux_nophix_cut_fil.fa
+
+
+
+#Cluster into 0.97 OTUs using UPARSE and cluster_otus
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -cluster_otus forward_reads/uniques_fwd_reads_demux_nophix_cut_fil.fa -otus forward_reads/uniques_fwd_reads_demux_nophix_cut_fil_otus.fa -uparseout forward_reads/uniques_fwd_reads_demux_nophix_cut_fil_otus_uparse.txt -relabel OTU
+
+#00:25 64Mb    100.0% 4987 OTUs, 1162 chimeras
+
+#Map reads back to OTUs at a 97% similarity score using otutab
+
+nano OTU_mapping_MUD.qsub
+
+
+#!/bin/sh -login
+#PBS -o /mnt/home/belldere/MUD_SequenceData
+#PBS -j oe
+#PBS -l nodes=1:ppn=10,walltime=03:00:00,mem=256gb
+#PBS -M "belldere@msu.edu"
+#PBS -m abe
+#PBS -N MUD_log_OTU_mapping
+#PBS -r n
+
+cd /mnt/home/belldere/MUD_SequenceData
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -otutab forward_reads/fwd_reads_demux.fq -otus forward_reads/uniques_fwd_reads_demux_nophix_cut_fil_otus.fa -uc forward_reads/fwd_reads_demux_nophix_cut_fil_otus_map.uc -otutabout forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_table.txt -biomout forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_jsn.biom -notmatchedfq forward_reads/fwd_reads_demux_nophix_cut_fil_otus_unmapped.fq
+
+###
+
+qsub OTU_mapping_MUD.qsub
+#52928502.mgr-04.i
+
+
+#02:41:08 55Mb    100.0% Searching fwd_reads_demux.fq, 79.5% matched
+#4238866 / 5330416 mapped to OTUs (79.5%)
+#02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_table.txt
+#02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_table.txt ...done.
+#02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_jsn.biom
+#02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_jsn.biom ...done.
+
+
+#classifying taxa against the reference database
+#https://www.drive5.com/usearch/manual/cmd_sintax.html
+
+nano MUD_its_16s_taxon_mapping.qsub
+
+#!/bin/sh -login
+#PBS -o /mnt/home/belldere/MUD_SequenceData
+#PBS -j oe
+#PBS -l nodes=1:ppn=20,walltime=36:00:00,mem=250gb
+#PBS -M belldere@msu.edu
+#PBS -m abe
+#PBS -N log_MUD_its_16s_taxon_mapping
+#PBS -r n
+
+cd /mnt/home/belldere/MUD_SequenceData
+
+
+#classifying taxa against the reference database
+#https://www.drive5.com/usearch/manual/cmd_sintax.html
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -sintax forward_reads/uniques_fwd_reads_demux_nophix_cut_fil_otus.fa -db /mnt/research/EvansLab/Databases/Silva132_release/silva_16s_v123.fa -tabbedout forward_reads/16s_fwd_reads_demux_nophix_cut_fil_tax_v123.sintax -strand both 
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -sintax forward_reads/uniques_fwd_reads_demux_nophix_cut_fil_otus.fa -db /mnt/research/EvansLab/Databases/UNITE_7.2/utax_ref_dataset_10102017_its_split/ITSx_split.ITS2.fasta -tabbedout forward_reads/ITS_fwd_reads_demux_nophix_cut_fil_tax_v72.sintax -strand both 
+
+#we have a lot of unknown taxa so I am going to run the taxon classification against the full ITS UNITE Databases 
+
+cd /mnt/home/belldere/MUD_SequenceData
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -sintax forward_reads/uniques_fwd_reads_demux_nophix_cut_fil_otus.fa -db /mnt/research/EvansLab/Databases/UNITE_7.2/utax_reference_dataset_01.12.2017.fasta -tabbedout forward_reads/ITS_fwd_reads_demux_nophix_cut_fil_tax_v72.1201017.sintax -strand both 
+#02:53 261Mb   100.0% Processing
+
+
+#I want to see if taxonomy is improved by the newest UNITe database (v8.0)
+cd /mnt/home/belldere/MUD_SequenceData
+
+
+/mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -sintax forward_reads/uniques_fwd_reads_demux_nophix_cut_fil_otus.fa -db /mnt/research/EvansLab/Databases/UNITE_8.0/utax_reference_dataset_all_02.02.2019.udb -tabbedout forward_reads/ITS_fwd_reads_demux_nophix_cut_fil_tax_v8_02.02.2019.sintax -strand both
+
+
+#I am going to blast the unknown sequence to the HPCC NCBI database https://wiki.hpcc.msu.edu/pages/viewpage.action?pageId=11896703
+
+/mnt/home/belldere/MUD_SequenceData
+mkdir NCBI_Unknown
+cd NCBI_Unknown
+
+#upload my unknown rep set MUD_unknown_phyla_rep_set.fna
+
+nano blast_NCBI_Unknown_rep_set.sbatch
+
+#!/bin/bash --login
+########## SBATCH Lines for Resource Request ##########
+ 
+#SBATCH --time=20:00:00             # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --nodes=1-2                # number of different nodes - could be an exact number or a range of nodes (same as -N)
+#SBATCH --ntasks=2                  # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --cpus-per-task=4           # number of CPUs (or cores) per task (same as -c)
+#SBATCH --mem-per-cpu=20G            # memory required per allocated CPU (or core) - amount of memory (in bytes)
+#SBATCH --job-name   log_blast_NCBI_Unknown_rep_set  # you can give your job a name for easier identification (same as -J)
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=belldere@msu.edu
+
+# Loading BLAST+
+module purge
+module load icc/2017.4.196-GCC-6.4.0-2.28  impi/2017.3.196 BLAST+/2.8.1-Python-2.7.14
+
+cd /mnt/home/belldere/MUD_SequenceData/NCBI_Unknown
+
+blastn -task blastn -db /mnt/research/common-data/Bio/blastdb/FASTA -query MUD_unknown_phyla_rep_set.fna -out MUD_unknown_phyla_rep_set.blast -evalue 10 -num_threads 4 -max_target_seqs 1 -max_hsps 10
+#Submitted batch job 30483446
+
+#BLAH!!! They removed the database.
+
+
+#Check the rep set against the phix spikes
+cd /mnt/home/belldere/MUD_SequenceData/no_phix/
+#capitalize the codons
+
+tr '[:lower:]' '[:upper:]'  < MUD_rep_set_desending_sort.fna > MUD_rep_set_desending_sort_CAP.fa
+
+/mnt/research/rdp/public/thirdParty/usearch10.0.240_i86linux64 -filter_phix MUD_rep_set_desending_sort_CAP.fa -output MUD_rep_set_desending_sort_CAP_filtered_reads.fa -alnout MUD_rep_set_desending_sort_phix_hits.txt
