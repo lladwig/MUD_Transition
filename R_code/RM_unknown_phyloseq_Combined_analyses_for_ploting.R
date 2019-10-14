@@ -282,13 +282,37 @@ nrow(sample_data(MUD.Fung_fungi_field))
 MUD.Fung_fungi_field<-prune_taxa(taxa_sums(MUD.Fung_fungi_field) > 0, MUD.Fung_fungi_field)
 ntaxa(MUD.Fung_fungi_field)
 #2674
+sum(otu_table(MUD.Fung_fungi_field))
+#2321517
 #let's look at the top taxa
 
 MUD.OTU_sum<-data.frame(taxa_sums(MUD.Fung_fungi_field))
-colnames(MUD.OTU_sum)="OTU_sum"
-MUD.OTU_sum_taxa=data.frame(merge(MUD.OTU_sum,data.frame(tax_table(MUD.Fung_fungi_field)), by="row.names", all.x = T))
-head(MUD.OTU_sum_taxa)
-colnames(MUD.OTU_sum_taxa)[1]="OTU"
+colnames(MUD.OTU_sum)="total_OTU_sum"
+sum(MUD.OTU_sum)
+
+#Now let's calculate the OTU sums for each ecotone species combination
+
+head(sample_data(MUD.Fung_fungi_field))
+unique(sample_data(MUD.Fung_fungi_field)$Spp)
+unique(sample_data(MUD.Fung_fungi_field)$Location)
+MUD.OTU_spp_loc_sum<-data.frame(Grass_BOGR_OTU_sum=taxa_sums(subset_samples(MUD.Fung_fungi_field, Spp=="BOGR"&Location=="Grass")),
+                                Grass_BOER_OTU_sum=taxa_sums(subset_samples(MUD.Fung_fungi_field, Spp=="BOER"&Location=="Grass")),
+                                Grass_PLJA_OTU_sum=taxa_sums(subset_samples(MUD.Fung_fungi_field, Spp=="PLJA"&Location=="Grass")),
+                                Ecotone_BOER_OTU_sum=taxa_sums(subset_samples(MUD.Fung_fungi_field, Spp=="BOER"&Location=="Ecotone")),
+                                Ecotone_PLJA_OTU_sum=taxa_sums(subset_samples(MUD.Fung_fungi_field, Spp=="PLJA"&Location=="Ecotone")),
+                                Ecotone_LATR_OTU_sum=taxa_sums(subset_samples(MUD.Fung_fungi_field, Spp=="LATR"&Location=="Ecotone")),
+                                Shrub_LATR_OTU_sum=taxa_sums(subset_samples(MUD.Fung_fungi_field, Spp=="LATR"&Location=="Shrub")))
+sum(MUD.OTU_spp_loc_sum)
+
+
+MUD.OTU_sum_comb=data.frame(merge(MUD.OTU_sum,MUD.OTU_spp_loc_sum, by="row.names", all.x = T))
+head(MUD.OTU_sum_comb)
+
+MUD.OTU_sum_comb_taxa=data.frame(merge(MUD.OTU_sum_comb,data.frame(tax_table(MUD.Fung_fungi_field)),by.x = "Row.names" ,by.y="row.names", all.x = T))
+head(MUD.OTU_sum_comb_taxa)
+colnames(MUD.OTU_sum_comb_taxa)[1]="OTU"
+nrow(MUD.OTU_sum_comb_taxa)
+
 
 
 #Let's add in the funguild classifications
@@ -298,17 +322,17 @@ head(funguild.80c)
 colnames(funguild.80c)[colnames(funguild.80c)=="fungi.Shurb.LATR.2"]="fungi.Shrub.LATR.2"
 colnames(funguild.80c)
 
-MUD.OTU_sum_taxa_funguild=data.frame(merge(MUD.OTU_sum_taxa,funguild.80c[,c(1,93:101)], by.x="OTU", by.y = "OTU.ID",all.x = T))
+MUD.OTU_sum_taxa_funguild=data.frame(merge(MUD.OTU_sum_comb_taxa,funguild.80c[,c(1,93:101)], by.x="OTU", by.y = "OTU.ID",all.x = T))
 head(MUD.OTU_sum_taxa_funguild)
+nrow(MUD.OTU_sum_taxa_funguild)
 
-
-MUD.OTU_sum_taxa_funguild_sort=MUD.OTU_sum_taxa_funguild[order(-MUD.OTU_sum_taxa_funguild$OTU_sum),]
+MUD.OTU_sum_taxa_funguild_sort=MUD.OTU_sum_taxa_funguild[order(-MUD.OTU_sum_taxa_funguild$total_OTU_sum),]
 head(MUD.OTU_sum_taxa_funguild_sort)
 nrow(MUD.OTU_sum_taxa_funguild_sort)
 #2674
 #Ouput this file for sharing with Lee
 
-write.csv(MUD.OTU_sum_taxa_funguild_sort,"D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_taxa_funguild_OTU_sum_desending_sort.csv")
+write.csv(MUD.OTU_sum_taxa_funguild_sort,"D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_taxa_funguild_OTU_sum_by_site_spp_desending_sort.csv")
 
 
 #Subsetting the representative sequences 
