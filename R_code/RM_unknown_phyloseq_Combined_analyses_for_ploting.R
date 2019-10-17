@@ -290,7 +290,7 @@ MUD.OTU_sum<-data.frame(taxa_sums(MUD.Fung_fungi_field))
 colnames(MUD.OTU_sum)="total_OTU_sum"
 sum(MUD.OTU_sum)
 
-#Now let's calculate the OTU sums for each ecotone species combination
+#####OTU sums for each ecotone species combination####
 
 head(sample_data(MUD.Fung_fungi_field))
 unique(sample_data(MUD.Fung_fungi_field)$Spp)
@@ -352,6 +352,19 @@ write.fasta(sequences =MUD.sort_rep_set_seq_sort, names = names(MUD.sort_rep_set
 #Spot check of the top 20 most abundant
 
 #OTU10 Eukaryota; Fungi; Dikarya; Basidiomycota; Ustilaginomycotina; Malasseziomycetes; Malasseziales; Malasseziaceae; Malassezia.
+#Lee looked through the genus-level IDs on the revised top 500 OTUs, only OTU10 seemed to be a contaminant
+#####Final filtered OTU table#####
+MUD.Fung_fungi_field=subset_samples(MUD.Fung_fungi, project!="mock_com"&project!="spegar")
+MUD.Fung_fungi_field<-prune_taxa(taxa_sums(MUD.Fung_fungi_field) > 0, MUD.Fung_fungi_field)
+tax_table(MUD.Fung_fungi_field)
+ntaxa(MUD.Fung_fungi_field)
+#2674
+MUD.Fung_only_field=prune_taxa(taxa_names(MUD.Fung_fungi_field)!="OTU10",MUD.Fung_fungi_field)
+ntaxa(MUD.Fung_only_field)
+#2673
+
+save(MUD.Fung_only_field, file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
+write.table(otu_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.txt")
 
 #nomalizing using DESEQ2
 
@@ -359,12 +372,15 @@ write.fasta(sequences =MUD.sort_rep_set_seq_sort, names = names(MUD.sort_rep_set
 
 library(DESeq2)
 library(vsn)
-MUD.Fung.deseq=phyloseq_to_deseq2(MUD.Fung_fungi, ~X.SampleID)#need to convert the phyloseq object to deseq2 dataset
+head(sample_data(MUD.Fung_only_field))
+MUD.Fung.deseq=phyloseq_to_deseq2(MUD.Fung_only_field, ~site)#need to convert the phyloseq object to deseq2 dataset
 #your grouping factor should be you samples
 
 #First try the direct transformations
 MUD.Fung.vsd<-varianceStabilizingTransformation(MUD.Fung.deseq)
-#no errors
+#-- note: fitType='parametric', but the dispersion trend was not well captured by the
+#function: y = a/x + b, and a local regression fit was automatically substituted.
+#specify fitType='local' or 'mean' to avoid this message next time.
 
 head(MUD.Fung.vsd)
 plotSparsity(assay(MUD.Fung.vsd))
@@ -402,19 +418,19 @@ meanSdPlot(assay(dseq_f2))
 #of variance over the mean may seem like the goal of such transformations, this may be unreasonable 
 #in the case of datasets with many true differences due to the experimental conditions."
 
-min(MUD.Fung_vst)
+min(assay(MUD.Fung.vsd))
 
 MUD.Fung_vst=assay(MUD.Fung.vsd)#variance stabilized transformation OTU table in matrix form
 min(MUD.Fung_vst)
-MUD.Fung_vst=MUD.Fung_vst+abs(min(MUD.Fung_vst))#add a constant to remove any zeros
+#0.1610818
+
 MUD.Fung_vst[1:10,1:10]
 min(rowSums(MUD.Fung_vst))
-#the normalization results in negatives
-#I have not found a consensus on how to handle them 
+
 
 #now we need to turn it back into a phyloseq object
 OTU.table.vst = otu_table(MUD.Fung_vst, taxa_are_rows = TRUE)
-write.table(otu_table(OTU.table.vst), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/MUD_fungi_fungi_OTU_ITS_VST.txt") 
+write.table(otu_table(OTU.table.vst), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_OTU_field_ITS_only_fung_VST.txt") 
 #phyloseq_obj_vst=phyloseq(OTU.table.vst,TAX.file, sample_data(map.file))
 ######End of Processing#####
 
@@ -438,30 +454,29 @@ library("seqinr")
 library(reshape2)
 options(contrasts=c("contr.sum", "contr.poly"))
 pa=function(x)(ifelse(x>0,1,0))
-eea <-read.csv("EEA_MUD_transition.csv")
-char <-read.csv("SoilCharacteristics_MUD_Transition.csv")
-MUD.Fung_vst=read.table("MUD_fungi_fungi_OTU_ITS_VST.txt", header = T,row.names = 1)
+eea <-read.csv("R_files/EEA_MUD_transition.csv")
+char <-read.csv("R_files/SoilCharacteristics_MUD_Transition.csv")
+MUD.Fung_vst=read.table("R_files/MUD_fungi_OTU_field_ITS_only_fung_VST.txt", header = T,row.names = 1)
 #there is a miss-spelled sample name
-colnames(MUD.Fung_vst)[colnames(MUD.Fung_vst)=="fungi.Shurb.LATR.2"]="fungi.Shrub.LATR.2"
-MUD.Fung_vst[1:10,1:10]
+#colnames(MUD.Fung_vst)[colnames(MUD.Fung_vst)=="fungi.Shurb.LATR.2"]="fungi.Shrub.LATR.2"
+#MUD.Fung_vst[1:10,1:10]
 fun_otu <- MUD.Fung_vst
 fun_otu[1:10,1:10]
 min(rowSums(fun_otu))
-#untrans.otu=read.table("MUD_fungi_fungi_OTU_ITS_trunc_phyl.txt",header=T, row.names = 1)
-#MUD.map=import_qiime_sample_data("MUD_Transition_map_qiime.txt")
-trans_map=read.csv("MUD_Transition_map.csv")
+
+trans_map=read.csv("R_files/MUD_Transition_map.csv")
 MUD.OTU = otu_table(fun_otu, taxa_are_rows = TRUE)
 length(colnames(MUD.OTU))
-#90
+#56
 sort(colnames(MUD.OTU))
 min(taxa_sums(MUD.OTU))
 nrow(MUD.OTU)
 ncol(MUD.OTU)
 
 colnames(MUD.OTU)
-MUD.fung.tax=as.matrix(read.table("MUD_fungi_fungi_taxon_ITS_trunc_phyl.txt",header=T))
+MUD.fung.tax=as.matrix(read.table("R_files/MUD_fungi_fungi_taxon_ITS_trunc_phyl.txt",header=T))
 nrow(MUD.fung.tax)
-#3750
+#3624
 MUD.fung.TAX = tax_table(MUD.fung.tax)
 head(eea)
 length(row.names(eea))
@@ -489,32 +504,32 @@ MUD.data=phyloseq(MUD.OTU,sample_data(MUD.map_eea_char),MUD.fung.TAX)
 
 
 ntaxa(MUD.data)
-#3750
+#2673
 sum(otu_table(MUD.data))
-#170867.8
+#99908.89
 
 min(sample_sums(MUD.data))
-#1012.763
+#1051.587
 
 max(sample_sums(MUD.data))
-#5212.293
+#5041.467
 
 sort(rank(sample_sums(MUD.data)))
 
 min(taxa_sums(MUD.data))
-
+#9.456247
 sort(sample_sums(MUD.data))
 MUD.data<-prune_taxa(taxa_sums(MUD.data) > 0, MUD.data)
 ntaxa(MUD.data)
-#2758
+#2673
 sum(otu_table(MUD.data))
-#170867.8
+#99908.89
 
 min(sample_sums(MUD.data))
-#1012.763
+#1051.587
 
 max(sample_sums(MUD.data))
-#5212.293
+#5041.467
 
 length(sample_sums(MUD.data))
 #56
@@ -529,11 +544,11 @@ nrow(MUD.data.divfil)
 #56
 hist(MUD.data.divfil$Shannon)
 #Shannon
-Shannon_mod <- lm((Shannon)^2 ~ Species + Site, data=MUD.data.divfil)
+Shannon_mod <- lm((Shannon)^15 ~ Species + Site, data=MUD.data.divfil)
 qqPlot(stdres(Shannon_mod))
 hist(stdres(Shannon_mod))
 shapiro.test(stdres(Shannon_mod))
-#0.2179
+#0.04533
 summary(Shannon_mod)
 Anova(Shannon_mod, type=3)
 #nada sig
@@ -562,7 +577,7 @@ Simpson_mod <- lm((InvSimpson) ~ Species + Site, data=MUD.data.divfil)
 qqPlot(stdres(Simpson_mod))
 hist(stdres(Simpson_mod))
 shapiro.test(stdres(Simpson_mod))
-#0.4781
+#0.2494
 summary(Simpson_mod)
 Anova(Simpson_mod, type=3)
 #nada sig
@@ -631,7 +646,7 @@ fung.clayT10.prop = prune_taxa(TopPHYL, MUD.data_fact.phylum.prop)
 #VST
 MUD.data.ord <- ordinate(MUD.data, method="NMDS",distance = "bray")
 #*** Solution reached
-#Stress:     0.1632236
+#Stress:     0.1480211 
 #Stress type 1, weak ties
 #Two convergent solutions found after 20 tries
 #Scaling: centring, PC rotation, halfchange scaling 
@@ -671,7 +686,7 @@ mmm1 <- metaMDS(MUD.data.dist, k = 3, trymax = 500,
               autotransform =FALSE,  
               wascores = TRUE, expand = TRUE,
               trace = 1, plot = TRUE)
-#0.133854
+#0.1101885
 
 #let's only look at the BOER and PLJA that cover two sites
 
@@ -684,7 +699,7 @@ nrow(MUD.data_grass_map)
 unique(MUD.data_grass_map$Spp)
 test_perm_grass <- adonis (MUD.data_grass.dist ~ MUD.data_grass_map$Location * MUD.data_grass_map$Spp, permutations=10000)
 print(test_perm_grass)
-#nada sig
+#MUD.data_grass_map$Location                         1    0.5263 0.52630  3.4405 0.10340 9.999e-05 ***
 # I *think* this code is a quasi post-hoc test that will compare the locations
 #pairwise.perm.manova(MUD.data.dist, MUD.data_map$Location, nperm=2000)
 
@@ -716,9 +731,9 @@ row.names(MUD.data_otu)
 MUD.data_taxa=as.data.frame(tax_table(MUD.data))
 
 #let load in the funguild results
-funguild.80c=read.delim("MUD_fungi_OTU_ITS_VST_80c.guilds.txt",sep = "\t")
+funguild.80c=read.delim("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_fungi_OTU_ITS_trunc_phyl_for_FunGuildV2.guilds.txt",sep = "\t")
 head(funguild.80c)
-row.names(funguild.80c)=funguild.80c$X
+row.names(funguild.80c)=funguild.80c$OTU.ID
 funguild.80c_names=funguild.80c[92:ncol(funguild.80c)]
 
 
@@ -754,29 +769,29 @@ summary(MUD.data_LATR.simp_taxa_mat_sig)
 nrow(MUD.data_LATR.simp_taxa_mat_sig)
 MUD.data_LATR.simp_funguild_mat_sig=merge(MUD.data_LATR.simp_taxa_mat_sig,funguild.80c_names, by="row.names")
 nrow(MUD.data_LATR.simp_funguild_mat_sig)
-#49
-write.csv(MUD.data_LATR.simp_funguild_mat_sig, "MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv")
-MUD.data_LATR.simp_funguild_mat_sig=read.csv("MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv", header = T)
+#56
+write.csv(MUD.data_LATR.simp_funguild_mat_sig, "R_files/MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv")
+MUD.data_LATR.simp_funguild_mat_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv", header = T)
 
 #how many of the SIMPER id otus were in Funguild 
 MUD.data_LATR.simp_funguild_mat_sig_class=subset(MUD.data_LATR.simp_funguild_mat_sig, Guild!="-")
 nrow(MUD.data_LATR.simp_funguild_mat_sig_class)
-#16
+#19
 
 
 #I want to extract the rep sequences that did not classify well for LATR_Eco_V_Shrub
-rep_set.fung<- read.fasta(file = "uniques_fwd_reads_demux_nophix_cut_fil_otus.fa", as.string = TRUE, set.attributes = FALSE)
+rep_set.fung<- read.fasta(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
 colnames(MUD.data_LATR.simp_funguild_mat_sig)
 nrow(MUD.data_LATR.simp_funguild_mat_sig)
 MUD.data_LATR.simp_funguild_mat_sig_uncl=subset(MUD.data_LATR.simp_funguild_mat_sig,Taxon=="-")
 nrow(MUD.data_LATR.simp_funguild_mat_sig_uncl)
-#33
+#37
 
 rep_set_LATR_Eco_V_Shrub_uncl_OTUs=rep_set.fung[names(rep_set.fung) %in% MUD.data_LATR.simp_funguild_mat_sig_uncl[,"OTU"]]
 head(rep_set_LATR_Eco_V_Shrub_uncl_OTUs)
 length(rep_set_LATR_Eco_V_Shrub_uncl_OTUs)
-#33
-write.fasta(sequences =rep_set_LATR_Eco_V_Shrub_uncl_OTUs, names = names(rep_set_LATR_Eco_V_Shrub_uncl_OTUs), file.out ="MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub_uncl_rep_set.fna")
+#37
+write.fasta(sequences =rep_set_LATR_Eco_V_Shrub_uncl_OTUs, names = names(rep_set_LATR_Eco_V_Shrub_uncl_OTUs), file.out ="R_files/MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub_uncl_rep_set.fna")
 
 #To start out, let's take the the top 10 that explain the most variation
 
@@ -818,13 +833,14 @@ rownames(MUD.data_map_Ecotone.simp_taxa_BOER_LATR)=MUD.data_map_Ecotone.simp_tax
 MUD.data_map_Ecotone.simp_taxa_BOER_LATR_sig=subset(MUD.data_map_Ecotone.simp_taxa_BOER_LATR, pval<0.05)
 summary(MUD.data_map_Ecotone.simp_taxa_BOER_LATR_sig)
 nrow(MUD.data_map_Ecotone.simp_taxa_BOER_LATR_sig)
-#378
+#66
 MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig=merge(MUD.data_map_Ecotone.simp_taxa_BOER_LATR_sig,funguild.80c_names, by="row.names")
-write.csv(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig, "MUD_sig_simper_fungi_80c_Ecotone_BEOR_LATR.csv")
+write.csv(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig, "R_files/MUD_sig_simper_fungi_80c_Ecotone_BEOR_LATR.csv")
 
 #To start out, let's take the the top 10 that explain the most variation
 
 MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top10=(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig[order(-MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig$average),])[1:10,]
+rownames(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top10)=MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top10$OTU
 rownames(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top10)
 
 #In Ecotone PLJA compared to LATR
@@ -848,7 +864,7 @@ summary(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA_sig)
 nrow(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA_sig)
 #337
 MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig=merge(MUD.data_map_Ecotone.simp_taxa_LATR_PLJA_sig,funguild.80c_names, by="row.names")
-write.csv(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig, "MUD_sig_simper_fungi_80c_Ecotone_LATR_PLJA.csv")
+write.csv(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig, "R_files/MUD_sig_simper_fungi_80c_Ecotone_LATR_PLJA.csv")
 
 
 
@@ -882,14 +898,16 @@ rownames(MUD.data_BOER.simp_taxa)=MUD.data_BOER.simp_taxa$OTU
 MUD.data_BOER.simp_taxa_sig=subset(MUD.data_BOER.simp_taxa, pval<0.05)
 summary(MUD.data_BOER.simp_taxa_sig)
 nrow(MUD.data_BOER.simp_taxa_sig)
+#119
 MUD.data_BOER.simp_funguild_sig=merge(MUD.data_BOER.simp_taxa_sig,funguild.80c_names, by="row.names")
-write.csv(MUD.data_BOER.simp_funguild_sig, "MUD_sig_simper_fungi_80c_BOER_Eco_V_Grassland.csv")
+write.csv(MUD.data_BOER.simp_funguild_sig, "R_files/MUD_sig_simper_fungi_80c_BOER_Eco_V_Grassland.csv")
 
 #Now I need to extract out the samples that have PLJA
 
 MUD.data_map=sample_data(MUD.data)
 MUD.data_map_PLJA=subset(MUD.data_map, Spp=="PLJA")
 nrow(MUD.data_map_PLJA)
+#16
 MUD.data_map_PLJA_otu=merge(MUD.data_map_PLJA,MUD.data_otu, by="row.names")
 nrow(MUD.data_map_PLJA_otu)
 colnames(MUD.data_map_PLJA_otu)
@@ -916,7 +934,7 @@ MUD.data_PLJA.simp_taxa_sig=subset(MUD.data_PLJA.simp_taxa, pval<0.05)
 summary(MUD.data_PLJA.simp_taxa_sig)
 nrow(MUD.data_PLJA.simp_taxa_sig)
 MUD.data_PLJA.simp_funguild_sig=merge(MUD.data_PLJA.simp_taxa_sig,funguild.80c_names, by="row.names")
-write.csv(MUD.data_PLJA.simp_funguild_sig, "MUD_sig_simper_fungi_80c_PLJA_Eco_V_Grassland.csv")
+write.csv(MUD.data_PLJA.simp_funguild_sig, "R_files/MUD_sig_simper_fungi_80c_PLJA_Eco_V_Grassland.csv")
 
 
 
@@ -929,11 +947,11 @@ rownames(MUD.data_LATR.simp_taxa_mat_sig_top10)
 
 #need to load in the csv files we created above
 
-MUD.data_PLJA.simp_funguild_sig=read.csv("MUD_sig_simper_fungi_80c_PLJA_Eco_V_Grassland.csv")
-MUD.data_BOER.simp_funguild_sig=read.csv("MUD_sig_simper_fungi_80c_BOER_Eco_V_Grassland.csv")
-MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig=read.csv("MUD_sig_simper_fungi_80c_Ecotone_LATR_PLJA.csv")
-MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig=read.csv("MUD_sig_simper_fungi_80c_Ecotone_BEOR_LATR.csv")
-MUD.data_LATR.simp_funguild_mat_sig=read.csv("MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv")
+MUD.data_PLJA.simp_funguild_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_PLJA_Eco_V_Grassland.csv")
+MUD.data_BOER.simp_funguild_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_BOER_Eco_V_Grassland.csv")
+MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_Ecotone_LATR_PLJA.csv")
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_Ecotone_BEOR_LATR.csv")
+MUD.data_LATR.simp_funguild_mat_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv")
 
 head(MUD.data_PLJA.simp_funguild_sig)
 MUD.data_simper_OTU=c(as.character(MUD.data_PLJA.simp_funguild_sig$OTU),as.character(MUD.data_BOER.simp_funguild_sig$OTU),
@@ -941,25 +959,25 @@ MUD.data_simper_OTU=c(as.character(MUD.data_PLJA.simp_funguild_sig$OTU),as.chara
                       as.character(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig$OTU),as.character(MUD.data_LATR.simp_funguild_mat_sig$OTU))
 
 length(MUD.data_simper_OTU)
-#934
+#384
 
 #remove duplicated OTUs
 
 MUD.data_simper_OTU_unq=unique(MUD.data_simper_OTU)
 length(MUD.data_simper_OTU_unq)
-#814
+#290
 anyDuplicated(MUD.data_simper_OTU_unq)
 
-rep_set.fung<- read.fasta(file = "uniques_fwd_reads_demux_nophix_cut_fil_otus.fa", as.string = TRUE, set.attributes = FALSE)
+rep_set.fung<- read.fasta(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
 
 head(rep_set.fung)
 length(rep_set.fung)
-#4987
+#4833
 rep_set_simper_OTUs=rep_set.fung[names(rep_set.fung) %in% MUD.data_simper_OTU_unq]
 head(rep_set_simper_OTUs)
 length(rep_set_simper_OTUs)
-#814
-write.fasta(sequences =rep_set_simper_OTUs, names = names(rep_set_simper_OTUs), file.out ="MUD.data_simper_OTU_rep_set.fna")
+#290
+write.fasta(sequences =rep_set_simper_OTUs, names = names(rep_set_simper_OTUs), file.out ="R_files/MUD.data_simper_OTU_rep_set.fna")
 
 
 
@@ -981,7 +999,7 @@ vec.df$huh <-rownames(vec.df)
 scores(vec, "vectors")
 summary(vec)
 
-(vec2 <-envfit(mmm1, soil.1, perm=9999, na.rm=TRUE)) #I think i added the environmental data
+(vec2 <-envfit(mmm1, soil, perm=9999, na.rm=TRUE)) #I think i added the environmental data
 ##Followed this info below for graphing arrows: https://stackoverflow.com/questions/14711470/plotting-envfit-vectors-vegan-package-in-ggplot2
 ## PROBLEM: this drops the catagorical traits from the analysis/graph and I don't know why
 plot_ordination(MUD.data, MUD.data.ord)+
@@ -998,12 +1016,6 @@ plot_ordination(MUD.data, MUD.data.ord)+
   geom_text_repel (data=vec.df, aes(x=NMDS1, y=NMDS2, label=huh), size=5)
 
 
-(fit <- envfit(MUD.data.ord, soil, perm = 999, na.rm=TRUE))
-scores(fit, "vectors")
-plot(m1)
-plot(fit)
-plot(fit, p.max = 0.05, col = "red")
-summary(fit)
 
 
 
@@ -1052,8 +1064,8 @@ eea.nom=decostand(eea, "range",na.rm=T)
 eea.dist=vegdist(eea.nom,method="euclidean")
 
 mantel(MUD.data.dist,eea.dist, permutations = 9999)
-#Mantel statistic r: 0.2045 
-#Significance: 0.001 
+#Mantel statistic r: 0.1754
+#Significance: 0.022
 
 #EEA SOils
 eea_soil <- c("NAG_soil", "AlkP_soil","AAP_soil","BG_soil")
@@ -1147,7 +1159,7 @@ print(test_perm)
 char.nom=decostand(soil, "range",na.rm=T)
 char.dist=vegdist(char.nom,method="euclidean")
 mantel(MUD.data.dist,char.dist, permutations = 9999)
-#Mantel statistic r: 0.3325 
+#Mantel statistic r: 0.4032
 #Significance: 1e-04 
 
 
@@ -1155,7 +1167,7 @@ mantel(MUD.data.dist,char.dist, permutations = 9999)
 
 mantel(eea.dist,char.dist, permutations = 9999)
 #Mantel statistic r: 0.138 
-#Significance: 0.0219
+#Significance: 0.0223 
 
 
 
@@ -1190,60 +1202,25 @@ pairwise.perm.manova(char.dist, MUD.data_map$Species, nperm=2000)
 #let try a partial mantel 
 
 mantel.partial(MUD.data.dist,eea.dist,char.dist, permutations = 9999)
-#Mantel statistic r: 0.08299 
-#Significance: 0.1144
-
-#all rank Taxon
-MUD.fung.tax_allRank=as.matrix(read.table("its_MUD_sintax_all_rank_simple.txt",header=T))
-MUD.fung.TAX_allRank = tax_table(MUD.fung.tax_allRank)
-MUD.data_allRank=phyloseq(otu_table(MUD.data),sample_data(MUD.data),MUD.fung.TAX_allRank)
-
-MUD.data_fact_allRank=merge_samples(MUD.data_allRank, "site_spp")
-sample_names(MUD.data_fact_allRank)     
-
-get_taxa_unique(MUD.data_fact_allRank, taxonomic.rank="Phylum")
-#12
-(MUD.data_fact_allRank.phylum<-tax_glom(MUD.data_fact_allRank, taxrank="Phylum"))
+#Mantel statistic r: 0.131 
+#Significance: 0.0634 
 
 
 
 
-TopPHYL_allRank = names(sort(taxa_sums(MUD.data_fact_allRank.phylum), TRUE)[1:10])
-mud_fung_allRank.T10 = prune_taxa(TopPHYL_allRank, MUD.data_fact_allRank.phylum)
-
-plot_bar(mud_fung_allRank.T10, x= "site_spp", fill="Phylum")+ 
-  geom_bar(aes(color=Phylum, fill=Phylum), stat="identity", position="stack")
-
-
-
-
-MUD.data_fact_allRank.phylum.prop=transform_sample_counts(MUD.data_fact_allRank.phylum, function(x)x/sum(x))
-sort(get_taxa_unique(MUD.data_fact_allRank, taxonomic.rank="Phylum"))
-
-sample_names(MUD.data_fact_allRank.phylum.prop)
-
-trans_positions=c("G.Boer", "G.Bogr", "G.Plja", "E.Boer", "E.Plja", "E.Latr", "S.Latr")
-fung_allRank.clayT10.prop = prune_taxa(TopPHYL_allRank, MUD.data_fact_allRank.phylum.prop)
-(p_fung_T10_allRank=plot_bar(fung_allRank.clayT10.prop, fill="Phylum")+ylab("Proportion")+ 
-    geom_bar(aes( fill=factor(Phylum)), stat="identity", position="stack",color="black")+xlab(NULL)+
-    scale_fill_brewer(palette = "Spectral")+theme_bw()+theme(axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
-                                                             axis.title=element_text(size=20),panel.grid.major=element_blank(),
-                                                             panel.grid.minor=element_blank())+
-    scale_x_discrete(limits = trans_positions))
-
-
-#untranformed for the analyses
-untrans.otu=read.table("MUD_fungi_fungi_OTU_ITS_trunc_phyl.txt")
+#####untranformed for the analyses####
+#write.table(otu_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.txt")
+untrans.otu=read.table("R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.txt")
 colnames(untrans.otu)[colnames(untrans.otu)=="fungi.Shurb.LATR.2"]="fungi.Shrub.LATR.2"
 untrans.MUD.OTU = otu_table(untrans.otu, taxa_are_rows = TRUE)
 sum(taxa_sums(untrans.MUD.OTU))
-#3960080
+#2288921
 MUD.data_untrans=phyloseq(untrans.MUD.OTU,sample_data(MUD.map_eea_char),MUD.fung.TAX)
 MUD.data_untrans<-prune_taxa(taxa_sums(MUD.data_untrans) > 0, MUD.data_untrans)
 sum(taxa_sums(MUD.data_untrans))
-#2338371
+#2288921
 ntaxa(MUD.data_untrans)
-#2758
+#2673
 Rich_meas = c("Observed", "Chao1")
 untrans.MUD.data.divfil=estimate_richness(MUD.data_untrans,measures=Rich_meas)
 untrans.MUD.data_map=sample_data(MUD.data_untrans)
@@ -1256,7 +1233,7 @@ Observed_R_mod <- lm((Observed) ~ Species + Site, data=untrans.MUD.data.divfil)
 qqPlot(stdres(Observed_R_mod))
 hist(stdres(Observed_R_mod))
 shapiro.test(stdres(Observed_R_mod))
-#0.6476
+#0.6666
 summary(Observed_R_mod)
 Anova(Observed_R_mod, type=3)
 #nada sig
@@ -1286,7 +1263,7 @@ Chao1_mod <- lm((Chao1) ~ Species + Site, data=untrans.MUD.data.divfil)
 qqPlot(stdres(Chao1_mod))
 hist(stdres(Chao1_mod))
 shapiro.test(stdres(Chao1_mod))
-#0.9931
+#0.9977
 summary(Chao1_mod)
 Anova(Chao1_mod, type=3)
 #nada sig
@@ -1315,14 +1292,12 @@ MUD.data_pa=transform_sample_counts(MUD.data_untrans,pa)
 max(otu_table(MUD.data_pa))
 
 MUD.data_pa.ord <- ordinate(MUD.data_pa, method="NMDS",distance = "jaccard")
-#**** No convergence -- monoMDS stopping criteria:
-#20: stress ratio > sratmax
-#Dimensions: 2 
-#Stress:     0.1916075 
+#*** Solution reached
+#Stress:     0.1882898 
 #Stress type 1, weak ties
-#No convergent solutions - best solution after 20 tries
+#Two convergent solutions found after 20 tries
 #Scaling: centring, PC rotation, halfchange scaling 
-#Species: expanded scores based on 'veganifyOTU(physeq)' 
+#Species: expanded scores based on 'veganifyOTU(physeq)'
 
 plot_ordination(MUD.data_pa, MUD.data_pa.ord)
 untrans.MUD.data_map=sample_data(MUD.data_untrans)
@@ -1336,7 +1311,7 @@ untrans.MUD.data_map$site
 ggplot(data=MUD.data_pa_ord_points, aes(x=MDS1,y=MDS2))+
   geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
   scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
-                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+geom_label_repel(size=3,aes(label = site))+
+                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
   scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
   theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
                    axis.title.x=element_text(size=12),axis.title.y=element_blank(),
@@ -1355,60 +1330,63 @@ pairwise.perm.manova(MUD.data_pa.dist, MUD.data_pa_map$Spp, nperm=2000)
 #we have one odd point Grass_PLJA_1
 
 subset(untrans.MUD.data.divfil, site=="Grass_PLJA_1")
-#Observed=85
+#Observed=76
 mean(untrans.MUD.data.divfil$Observed)
-#288.2143
+#276.3929
 untrans.MUD.data.divfil %>% group_by(Spp)  %>% summarise_at("Observed", ~mean(.))
 #  Spp   Observed
-#1 BOER      303.
-#2 BOGR      281.
-#3 LATR      261.
-#4 PLJA      304 
+#1 BOER      290.
+#2 BOGR      269.
+#3 LATR      251.
+#4 PLJA      291.
 
-#Chao1=116.6667
+#Chao1=106
 mean(untrans.MUD.data.divfil$Chao1)
-#385.8024
+#373.6054
 untrans.MUD.data.divfil %>% group_by(Spp)  %>% summarise_at("Chao1", ~mean(.))
 #Spp   Chao1
-#1 BOER   401.
-#2 BOGR   372.
-#3 LATR   356.
-#4 PLJA   407.
+#1 BOER   390.
+#2 BOGR   360.
+#3 LATR   342.
+#4 PLJA   395.
 
 sample_sums(MUD.data_untrans)
-#Sample Sum = 14494
+#fungi.Grass.PLJA.1
+#Sample Sum = 14165
 
 min(sample_sums(MUD.data_untrans))
-#14494
+#14165
 
 #bottom read numbers
 sort(sample_sums(MUD.data_untrans))
-#  fungi.Grass.PLJA.1   fungi.Grass.BOGR.7   fungi.Grass.BOGR.2 fungi.Ecotone.LATR.7 fungi.Ecotone.LATR.6 
-#               14494                19492                23592                26959                27900 
+#fungi.Grass.PLJA.1 fungi.Ecotone.LATR.6   fungi.Grass.BOGR.7   fungi.Grass.BOGR.2 fungi.Ecotone.LATR.7 
+#14165                17114                19262                23452                26915 
 
 max(sample_sums(MUD.data_untrans))
 #66330
 
 mean(sample_sums(MUD.data_untrans))
-#41756.62
+#40873.59
+
+
 
 #Funguild seems like an interesting analysis 
 
 #let load in the funguild results
-funguild.80c=read.delim("MUD_fungi_OTU_ITS_VST_80c.guilds.txt",sep = "\t")
+funguild.80c=read.delim("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_fungi_OTU_ITS_trunc_phyl_for_FunGuildV2.guilds.txt",sep = "\t")
 head(funguild.80c)
 #one sample name is misspelled
-colnames(funguild.80c)[colnames(funguild.80c)=="fungi.Shurb.LATR.2"]="fungi.Shrub.LATR.2"
 
-row.names(funguild.80c)=funguild.80c$X
+
+row.names(funguild.80c)=funguild.80c$OTU.ID
 funguild.80c_names=funguild.80c[92:ncol(funguild.80c)]
 nrow(funguild.80c_names)
-#4951
+#3624
 
 #how many of our otus have some id in FunGuild
 MUD.data_untrans_OTU=(otu_table(MUD.data_untrans))
 nrow(MUD.data_untrans_OTU)
-#2758
+#2673
 sum(MUD.data_untrans_OTU)
 
 MUD.data_untrans_OTU_funguild=merge(MUD.data_untrans_OTU, funguild.80c_names, by="row.names",all.x=T)
@@ -1416,16 +1394,16 @@ head(MUD.data_untrans_OTU_funguild)
 
 MUD.data_untrans_OTU_funguild_class=subset(MUD.data_untrans_OTU_funguild, Taxon!="-")
 nrow(MUD.data_untrans_OTU_funguild_class)
-#702
+#766
 #percentage 
-702/2758
-#0.2545323
+766/2673
+#0.2865694
 
 sum(MUD.data_untrans_OTU_funguild_class[,2:57])
-#723520
+#606531
 #percentage 
-723520/2338371
-#0.309412
+606531/2288921
+#0.2649856
 
 
 
