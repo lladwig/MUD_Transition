@@ -5,7 +5,8 @@ library(BioIDMapper)#archived package
 library(taxize)
 library(tidyr)
 Sys.setenv(ENTREZ_KEY = "2c45c42bce79a9b19dac67c6e18d67fa2409")
-"%w/o%" <- function(x,y)!('%in%'(x,y))
+'%w/o%' <- function(x,y)!('%in%'(x,y))
+
 #####Processing conducted before by hand#####
 #fungi
 
@@ -434,6 +435,8 @@ write.table(otu_table(OTU.table.vst), "D:/MUD_SequenceData/Analyses_collaboratio
 #phyloseq_obj_vst=phyloseq(OTU.table.vst,TAX.file, sample_data(map.file))
 ######End of Processing#####
 
+
+#####Begin analyses####
 setwd("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/")
 
 #library(reshape)
@@ -1406,6 +1409,73 @@ sum(MUD.data_untrans_OTU_funguild_class[,2:57])
 #0.2649856
 
 
+#####Taylor lead Protax and BLAST Taxonomy####
+
+#VST phyloseq obj beginning of analyses section 
+#MUD.data
+
+#extract OTU table
+otu_table(MUD.data)[1:10,1:10]
+otu_MUD.data=data.frame(otu_table(MUD.data))
+otu_MUD.data[1:10,1:10]
+otu_MUD.data$OTU.ID=row.names(otu_MUD.data)
+head(otu_MUD.data$OTU.ID)
+subset(otu_MUD.data, OTU.ID=="OTU10 ")
+#load in the top 500 taxa classified with protax and funGuild
+
+top500_funGuild_raw=read.csv("R_files/Top500Funguild_R.csv", header = T)
+colnames(top500_funGuild_raw)
+nrow(top500_funGuild_raw)
+#[1] "Rank"                        "Final.Taxonomy.for.Funguild" "OTU.ID"                     
+#[4] "taxonomy"                    "Taxon"                       "Taxon.Level"                
+#[7] "Trophic.Mode"                "Guild"                       "Confidence.Ranking"         
+#[10] "Growth.Morphology"           "Trait"                       "Notes"                      
+#[13] "Citation.Source"      
+head(top500_funGuild_raw$OTU.ID)
+length(top500_funGuild_raw$OTU.ID)
+#501
+otu_MUD_top500_FG=merge(otu_MUD.data,top500_funGuild_raw, by="OTU.ID", all.y = T)
+nrow(otu_MUD_top500_FG)
+#501
+subset(otu_MUD_top500_FG,is.na(fungi.Grass.BOGR.1))$OTU.ID
+#"OTU001" "OTU10" are not in my original otu table 
+
+#let's compare this list to the original rank of OTUs
+
+MUD.OTU_sum_taxa_funguild_sort= read.csv("R_files/MUD_taxa_funguild_OTU_sum_desending_sort.csv", header=T)
+head(MUD.OTU_sum_taxa_funguild_sort)
+nrow(MUD.OTU_sum_taxa_funguild_sort[1:500,])
+
+non_overlap_seq=otu_MUD_top500_FG$OTU.ID[otu_MUD_top500_FG$OTU.ID %w/o% MUD.OTU_sum_taxa_funguild_sort[1:500,]$OTU]
+non_overlap_seq2=MUD.OTU_sum_taxa_funguild_sort[1:500,]$OTU[MUD.OTU_sum_taxa_funguild_sort[1:500,]$OTU %w/o%
+                                                              otu_MUD_top500_FG$OTU.ID]
+
+#OTU10 is the Malassezia which I removed from previous analyses
+#OTU001 is blank in the file from Lee? I think I drop both of them
+
+otu_MUD_top500_FG_sub=subset(otu_MUD_top500_FG, OTU.ID!="OTU001"&OTU.ID!="OTU10")
+nrow(otu_MUD_top500_FG_sub)
+#499
+colnames(otu_MUD_top500_FG_sub)
+
+otu_MUD_top500_FG_sub$OTU_sum=rowSums(otu_MUD_top500_FG_sub[,2:57])
+otu_MUD_top500_FG_sub_sort=otu_MUD_top500_FG_sub[order(-otu_MUD_top500_FG_sub$OTU_sum),]
+head(otu_MUD_top500_FG_sub_sort$OTU.ID)
+head(MUD.OTU_sum_taxa_funguild_sort$OTU)
+unique(otu_MUD_top500_FG_sub$Trophic.Mode)
+#[1] Saprotroph                        -                                 Pathotroph-Saprotroph-Symbiotroph
+#[4] Saprotroph-Symbiotroph            Pathotroph                        Pathotroph-Saprotroph            
+#[7] Symbiotroph                       Saprotroph-Pathotroph-Symbiotroph
+
+unique(otu_MUD_top500_FG_sub$Guild)
+#there are 53....
+
+otu_MUD_top500_FG_sub %>% group_by(Trophic.Mode) %>% summarise_at(vars(OTU_sum),list(~sum(.),~n(),se=~sd(.)/sqrt(n()),~sd(.)))
+
+
+otu_MUD_top500_FG_sub_guild=otu_MUD_top500_FG_sub %>% group_by(Guild) %>% summarise_at(vars(OTU_sum),list(~sum(.),~n(),se=~sd(.)/sqrt(n()),~sd(.)))
+
+otu_MUD_top500_FG_sub_guild_sort=otu_MUD_top500_FG_sub_guild[order(-otu_MUD_top500_FG_sub_guild$n),]
 
 
 #####NEED TO UPDATE THE BELOW CODE####
