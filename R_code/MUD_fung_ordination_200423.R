@@ -12,6 +12,7 @@ library(readxl) #for importing excel files
 library(vegan)
 library(MASS)
 library(grid)
+library(VennDiagram)
 
 #~*~*~*~*~*~*~*~ Load Data ~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*
 
@@ -40,7 +41,9 @@ trt <- trt_raw %>%
 trt_trans <- read_csv("R_files/otu_x_trt_transposed_in_excel_200424.csv")
 
 # delete OTUs that are contamination (based on Lee's ID)
-trt_trans <- trt_trans[, !(colnames(trt_trans) %in% c("OTU10","OTU40","OTU763"))] 
+trt_trans <- trt_trans[, !(colnames(trt_trans) %in% c("OTU10","OTU40","OTU763"))]
+trt_trans_v <- trt_trans #making a copy I can use for making Venn diagrams below
+
 trt_trans_rownames <- trt_trans[1] #list of names so I can add them back in later. Not the idea way, but this row naming business doesn't work, namely the rownames don't hold
 trt_trans_rownames$number <- 1:nrow(trt_trans_rownames) #this variable can get merged with later dataset
 
@@ -175,9 +178,63 @@ vec_pick <- ggplot((data = vec_sort_b), mapping = aes(x = MDS1, y = MDS2)) +
 vec_pick
 
 
+###### Looking at shared species across different combinations of treatments
+## GOAL: venn diagrams for OTU present for LATR ecotone vs shrub, ecotone LATR vs PLJA and ecotone LATR vs BOER
+
+#split the first column called "OTU" into separate columns based on where the dots are, then make a new variable with site and species merged into one, then summarize by site_spp by adding values for each OTU across all the reps, then change to presense/absense; then... then make speapate datasets for each comparision of interst
+tester <- trt_trans_v %>%
+  gather("taxa", "abun", -OTU) %>%
+  #pivot_longer(cols = OTU, names_to = "taxa", values_to = "abun")
+  separate(OTU, c("project", "site", "spp", "rep", "\\.")) %>% #separate label info
+  tidyr::unite(site_spp, site, spp) %>% #makes a site_spp column
+  group_by(site_spp, taxa) %>%
+  dplyr::summarise(aveabun = mean(abun))
+
+Eco_boer_latr <- tester %>%
+  filter(site_spp == "Ecotone_BOER" | site_spp == "Ecotone_LATR") %>%
+  spread(site_spp, aveabun) %>%
+  mutate(BOER = if_else(Ecotone_BOER >0, 5, 0)) %>%
+  mutate(LATR = if_else(Ecotone_LATR >0, 1, 0)) %>%
+  mutate(both = BOER + LATR) %>%
+  count(both)
+#hist(Eco_boer_latr$both)
+
+grid.newpage()
+weeell <- draw.pairwise.venn(1347, 1568, 873, c("Ecotone LATR", "Ecotone BOER"), cat.dist = -0.05, fill = c("darkturquoise", "saddlebrown"))
+grid.draw(weeell)  
+  
+
+Eco_plja_latr <- tester %>%
+  filter(site_spp == "Ecotone_PLJA" | site_spp == "Ecotone_LATR") %>%
+  spread(site_spp, aveabun) %>%
+  mutate(PLJA = if_else(Ecotone_PLJA >0, 5, 0)) %>%
+  mutate(LATR = if_else(Ecotone_LATR >0, 1, 0)) %>%
+  mutate(both = PLJA + LATR) %>%
+  count (both)
+#hist(Eco_plja_latr$both)  
+
+grid.newpage()
+hmmm <- draw.pairwise.venn(1347, 1493, 844, c("Ecotone LATR", "Ecotone PLJA"), cat.dist = -0.05, fill = c("darkturquoise", "bisque"))
+grid.draw(hmmm)
+
+latr_eco_shrub <- tester %>%
+  filter(site_spp == "Shrub_LATR" | site_spp == "Ecotone_LATR") %>%
+  spread(site_spp, aveabun) %>%
+  mutate(eco = if_else(Shrub_LATR >0, 5, 0)) %>%
+  mutate(shrub = if_else(Ecotone_LATR >0, 1, 0)) %>%
+  mutate(both = shrub + eco) %>%
+  count(both)
+hist(latr_eco_shrub$both)  
+
+grid.newpage()
+grrr <- draw.pairwise.venn(1347, 1431, 791, c("shrub LATR", "ecotone BOER"), cat.dist = -0.05, fill = "darkturquoise")
+grid.draw(grrr)
+
+grid.newpage()
 
 
 
+#### graveyard #########
 test <- otu_scores[with(otu_scores, order(-MDS1)),] #sort desending
 head(test)
 test2 <- otu_scores[with(otu_scores, order(MDS1)),] #sort desending
