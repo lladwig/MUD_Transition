@@ -538,6 +538,8 @@ length(sample_sums(MUD.data))
 #56
 #Diversity 
 
+#save(MUD.data, file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.data_dseq2_phyloseq_obj.RData")
+
 alpha_meas = c("Shannon", "InvSimpson")
 MUD.data.divfil=estimate_richness(MUD.data,measures=alpha_meas)
 MUD.data_map=sample_data(MUD.data)
@@ -1412,7 +1414,23 @@ sum(MUD.data_untrans_OTU_funguild_class[,2:57])
 #####Taylor lead Protax and BLAST Taxonomy####
 
 #VST phyloseq obj beginning of analyses section 
+
+#Diversity 
+load("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.data_dseq2_phyloseq_obj.RData")
 #MUD.data
+ntaxa(MUD.data)
+#2673
+sum(otu_table(MUD.data))
+#99908.89
+
+min(sample_sums(MUD.data))
+#1051.587
+
+max(sample_sums(MUD.data))
+#5041.467
+
+length(sample_sums(MUD.data))
+#56
 
 #extract OTU table
 otu_table(MUD.data)[1:10,1:10]
@@ -1473,9 +1491,436 @@ unique(otu_MUD_top500_FG_sub$Guild)
 otu_MUD_top500_FG_sub %>% group_by(Trophic.Mode) %>% summarise_at(vars(OTU_sum),list(~sum(.),~n(),se=~sd(.)/sqrt(n()),~sd(.)))
 
 
-otu_MUD_top500_FG_sub_guild=otu_MUD_top500_FG_sub %>% group_by(Guild) %>% summarise_at(vars(OTU_sum),list(~sum(.),~n(),se=~sd(.)/sqrt(n()),~sd(.)))
+otu_MUD_top500_FG_sub_guild=otu_MUD_top500_FG_sub %>% group_by(Guild) %>% summarise_at(vars(),list(~sum(.),~n(),se=~sd(.)/sqrt(n()),~sd(.)))
 
 otu_MUD_top500_FG_sub_guild_sort=otu_MUD_top500_FG_sub_guild[order(-otu_MUD_top500_FG_sub_guild$n),]
+
+#Let's look at main categories of
+#Saprotroph Pathotroph Symbiotroph
+colnames(otu_MUD_top500_FG_sub)
+otu_MUD_top500_FG_sub_troph=otu_MUD_top500_FG_sub[,c(2:57,63)]%>%group_by(Trophic.Mode)%>%summarise_all(~sum(.))
+otu_MUD_top500_FG_sub_main_trop=subset(otu_MUD_top500_FG_sub_troph, Trophic.Mode=="Saprotroph"|
+                                          Trophic.Mode=="Pathotroph"|Trophic.Mode=="Symbiotroph")
+
+otu_MUD_top500_FG_sub_main_trop_M=melt(otu_MUD_top500_FG_sub_main_trop)
+
+otu_MUD_top500_FG_sub_main_trop_M_trt=merge(otu_MUD_top500_FG_sub_main_trop_M,sample_data(MUD.data),by.x = "variable",
+                                            by.y = "row.names")
+
+
+#First let's look at Saprotroph
+otu_MUD_top500_FG_sub_main_trop_M_trt_sap=subset(otu_MUD_top500_FG_sub_main_trop_M_trt, Trophic.Mode=="Saprotroph")
+
+Saprt_abun_R_mod <- lm(log(value) ~ Species + Site, data=otu_MUD_top500_FG_sub_main_trop_M_trt_sap)
+qqPlot(stdres(Saprt_abun_R_mod))
+hist(stdres(Saprt_abun_R_mod))
+shapiro.test(stdres(Saprt_abun_R_mod))
+#0.02566
+summary(Saprt_abun_R_mod)
+Anova(Saprt_abun_R_mod, type=3)
+#nada sig
+#emmeans(Saprt_abun_R_mod, pairwise~Site)
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Saprotrophs_g=ggplot(otu_MUD_top500_FG_sub_main_trop_M_trt_sap, aes(x=Site, y=value),
+                 fill=Species)
+
+(Saprotrophs_T_p=Saprotrophs_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Saprotrophs_g$data, aes(x=Site, y=value,
+                                          fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Saprotroph reads\n(VST normalized)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+
+#Second let's look at Pathotroph
+otu_MUD_top500_FG_sub_main_trop_M_trt_path=subset(otu_MUD_top500_FG_sub_main_trop_M_trt, Trophic.Mode=="Pathotroph")
+
+Patho_abun_R_mod <- lm(log(value) ~ Species + Site, data=otu_MUD_top500_FG_sub_main_trop_M_trt_path)
+qqPlot(stdres(Patho_abun_R_mod))
+hist(stdres(Patho_abun_R_mod))
+shapiro.test(stdres(Patho_abun_R_mod))
+#0.02566
+summary(Patho_abun_R_mod)
+Anova(Patho_abun_R_mod, type=3)
+#nada sig
+#emmeans(Patho_abun_R_mod, pairwise~Site)
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Pathotrophs_g=ggplot(otu_MUD_top500_FG_sub_main_trop_M_trt_path, aes(x=Site, y=value),
+                     fill=Species)
+
+(Pathotroph_T_p=Pathotrophs_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Pathotrophs_g$data, aes(x=Site, y=value,
+                                              fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Pathotroph reads\n(VST normalized)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                                 values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                                 labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+
+
+#Third let's look at Symbiotroph
+otu_MUD_top500_FG_sub_main_trop_M_trt_symbio=subset(otu_MUD_top500_FG_sub_main_trop_M_trt, Trophic.Mode=="Symbiotroph")
+
+Symbio_abun_R_mod <- lm(log(value) ~ Species + Site, data=otu_MUD_top500_FG_sub_main_trop_M_trt_symbio)
+qqPlot(stdres(Symbio_abun_R_mod))
+hist(stdres(Symbio_abun_R_mod))
+shapiro.test(stdres(Symbio_abun_R_mod))
+#0.5152
+summary(Symbio_abun_R_mod)
+Anova(Symbio_abun_R_mod, type=3)
+#Site          0.77  2    2.9378 0.06219 .
+emmeans(Symbio_abun_R_mod, pairwise~Site)
+#E - G      0.0833 0.128 50 0.650   0.7931 
+#E - S      0.4229 0.181 50 2.335   0.0601 
+#G - S      0.3396 0.222 50 1.531   0.2852 
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Symbiotroph_g=ggplot(otu_MUD_top500_FG_sub_main_trop_M_trt_symbio, aes(x=Site, y=value),
+                     fill=Species)
+
+(Symbiotroph_T_p=Symbiotroph_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Symbiotroph_g$data, aes(x=Site, y=value,
+                                              fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Symbiotroph reads\n(VST normalized)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                                 values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                                 labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+
+
+
+#Let's dig into the Guild results now
+otu_MUD_top500_FG_sub_guild=otu_MUD_top500_FG_sub %>% group_by(Guild) %>% summarise_at(vars(),list(~sum(.),~n(),se=~sd(.)/sqrt(n()),~sd(.)))
+
+otu_MUD_top500_FG_sub_guild_sort=otu_MUD_top500_FG_sub_guild[order(-otu_MUD_top500_FG_sub_guild$n),]
+otu_MUD_top500_FG_sub_guild_sort$Guild
+#Let's look at main categories of
+#
+otu_MUD_top500_FG_sub$Guild_comb=if_else(otu_MUD_top500_FG_sub$Guild=="Undefined Saprotroph","Saprotroph",
+                                                       if_else(otu_MUD_top500_FG_sub$Guild=="Soil Saprotroph","Saprotroph",
+                                                               if_else(otu_MUD_top500_FG_sub$Guild=="Dung Saprotroph-Plant Saprotroph-Soil Saprotroph",
+                                                                       "Saprotroph",if_else(otu_MUD_top500_FG_sub$Guild=="Leaf Saprotroph","Saprotroph",
+                                                                                            if_else(otu_MUD_top500_FG_sub$Guild=="Dung Saprotroph-Plant Saprotroph","Saprotroph",
+                                                                                                      if_else(otu_MUD_top500_FG_sub$Guild=="Wood Saprotroph","Saprotroph",
+                                                                                                              if_else(otu_MUD_top500_FG_sub$Guild=="Plant Saprotroph-Wood Saprotroph", "Saprotroph",
+                                                                                                                      if_else(otu_MUD_top500_FG_sub$Guild=="Dung Saprotroph-Wood Saprotroph","Saprotroph",
+                                                                                                                              if_else(otu_MUD_top500_FG_sub$Guild=="Dung Saprotroph-Soil Saprotroph", 
+                                                                                                                                      "Saprotroph",as.character(otu_MUD_top500_FG_sub$Guild))))))))))
+
+colnames(otu_MUD_top500_FG_sub)
+otu_MUD_top500_FG_sub_GUILD=otu_MUD_top500_FG_sub[,c(2:57,71)]%>%group_by(Guild_comb)%>%summarise_all(~sum(.))
+otu_MUD_top500_FG_sub_main_guild=subset(otu_MUD_top500_FG_sub_GUILD, Guild_comb=="Arbuscular Mycorrhizal"|
+                                          Guild_comb=="Saprotroph"|Guild_comb=="Plant Pathogen"|Guild_comb=="Endophyte"
+                                          )
+#Let's make a new column with the saprotrophs in a combine category 
+otu_MUD_top500_FG_sub_main_guild_M=melt(otu_MUD_top500_FG_sub_main_guild)
+
+otu_MUD_top500_FG_sub_main_guild_M_trt=merge(otu_MUD_top500_FG_sub_main_guild_M,sample_data(MUD.data),by.x = "variable",
+                                            by.y = "row.names")
+
+
+#First let's look at Arbuscular Mycorrhizal
+otu_MUD_top500_FG_sub_main_guild_M_trt_arb=subset(otu_MUD_top500_FG_sub_main_guild_M_trt, Guild_comb=="Arbuscular Mycorrhizal")
+
+Arbu_abun_R_mod <- lm(log(value) ~ Species + Site, data=otu_MUD_top500_FG_sub_main_guild_M_trt_arb)
+qqPlot(stdres(Arbu_abun_R_mod))
+hist(stdres(Arbu_abun_R_mod))
+shapiro.test(stdres(Arbu_abun_R_mod))
+#0.9303
+summary(Arbu_abun_R_mod)
+Anova(Arbu_abun_R_mod, type=3)
+#Site          1.57  2    3.8232 0.02851 * 
+emmeans(Arbu_abun_R_mod, pairwise~Site)
+#E - G       0.112 0.160 50 0.700   0.7648 
+#E - S       0.605 0.226 50 2.675   0.0267 
+#G - S       0.493 0.277 50 1.780   0.1866
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Arbuscular_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_arb, aes(x=Site, y=value),
+                     fill=Species)
+
+(Arbuscular_T_p=Arbuscular_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Arbuscular_g$data, aes(x=Site, y=value,
+                                              fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Arbuscular mycorrhizal reads\n(VST normalized)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                                  values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                                  labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+
+
+#Second let's look at Saprotroph
+otu_MUD_top500_FG_sub_main_guild_M_trt_Sapr=subset(otu_MUD_top500_FG_sub_main_guild_M_trt, Guild_comb=="Saprotroph")
+
+Sapr_abun_R_mod <- lm(log(value) ~ Species + Site, data=otu_MUD_top500_FG_sub_main_guild_M_trt_Sapr)
+qqPlot(stdres(Sapr_abun_R_mod))
+hist(stdres(Sapr_abun_R_mod))
+shapiro.test(stdres(Sapr_abun_R_mod))
+#0.01
+summary(Sapr_abun_R_mod)
+Anova(Sapr_abun_R_mod, type=3)
+#nada sig
+emmeans(Sapr_abun_R_mod, pairwise~Site)
+#
+
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Sapro_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Sapr, aes(x=Site, y=value),
+                    fill=Species)
+
+(Saprotroph_G_p=Sapro_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Sapro_g$data, aes(x=Site, y=value,
+                                             fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Saprotroph reads\n(VST normalized)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                                             values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                                             labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+
+#Third let's look at Plant Pathogen
+otu_MUD_top500_FG_sub_main_guild_M_trt_Path=subset(otu_MUD_top500_FG_sub_main_guild_M_trt, Guild_comb=="Plant Pathogen")
+
+Path_abun_R_mod <- lm(log(value) ~ Species + Site, data=otu_MUD_top500_FG_sub_main_guild_M_trt_Path)
+qqPlot(stdres(Path_abun_R_mod))
+hist(stdres(Path_abun_R_mod))
+shapiro.test(stdres(Path_abun_R_mod))
+#0.1994
+summary(Path_abun_R_mod)
+Anova(Path_abun_R_mod, type=3)
+#nada sig
+emmeans(Path_abun_R_mod, pairwise~Site)
+#
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Plant_path_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Path, aes(x=Site, y=value),
+               fill=Species)
+
+(Plant_path_G_p=Plant_path_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Plant_path_g$data, aes(x=Site, y=value,
+                                        fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Plant pathogen reads\n(VST normalized)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                                 values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                                 labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+
+
+
+#Forth let's look at Plant Pathogen
+otu_MUD_top500_FG_sub_main_guild_M_trt_Endo=subset(otu_MUD_top500_FG_sub_main_guild_M_trt, Guild_comb=="Endophyte")
+
+Endo_abun_R_mod <- lm((value) ~ Species + Site, data=otu_MUD_top500_FG_sub_main_guild_M_trt_Endo)
+qqPlot(stdres(Endo_abun_R_mod))
+hist(stdres(Endo_abun_R_mod))
+shapiro.test(stdres(Endo_abun_R_mod))
+#0.3664
+summary(Endo_abun_R_mod)
+Anova(Endo_abun_R_mod, type=3)
+#nada sig
+emmeans(Endo_abun_R_mod, pairwise~Site)
+#
+
+positions2=c("G","E","S")
+spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+Endop_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Endo, aes(x=Site, y=value),
+                    fill=Species)
+
+(Endophyte_G_p=Endop_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
+    geom_boxplot(data=Endop_g$data, aes(x=Site, y=value,
+                                             fill=factor(Species, levels=spp_pos)),
+                 outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
+    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_y_continuous(name = "Endophyte reads\n(VST normalized)")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
+                                                                                                     values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+                                                                                                     labels= c("BOGR","BOER","PLJA","LATR"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                     axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+
+#Simper analyses with the updated funguild results
+top500_funGuild_raw=read.csv("R_files/Top500Funguild_R.csv", header = T)
+colnames(top500_funGuild_raw)
+nrow(top500_funGuild_raw)
+head(top500_funGuild_raw)
+
+
+#PLJA Between Grassland and Ecotone
+MUD.data_PLJA.simp_funguild_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_PLJA_Eco_V_Grassland.csv", row.names = "Row.names")
+head(MUD.data_PLJA.simp_funguild_sig)
+nrow(MUD.data_PLJA.simp_funguild_sig)
+#70
+#need to remove the previous classifications 
+MUD.data_PLJA.simp_funguild_sig[,c("X","Domain","Phylum","Class","Order","Family","Genus","Species","taxonomy","Taxon","Taxon.Level","Trophic.Mode","Guild",
+                                   "Growth.Morphology","Trait","Confidence.Ranking","Notes","Citation.Source")]=NULL
+
+#Let's create a column that categories the simper direction 
+MUD.data_PLJA.simp_funguild_sig$SIM_dir=if_else(MUD.data_PLJA.simp_funguild_sig$av_Ecotone<MUD.data_PLJA.simp_funguild_sig$av_Grassland, "Grassland","Ecotone")
+
+
+#Merge with the new classification
+MUD.data_PLJA.simp_funguild_sig_top500=merge(MUD.data_PLJA.simp_funguild_sig,top500_funGuild_raw,by.x="OTU", by.y="OTU.ID")
+head(MUD.data_PLJA.simp_funguild_sig_top500)
+nrow(MUD.data_PLJA.simp_funguild_sig_top500)
+#45
+
+MUD.data_PLJA.simp_funguild_sig_top500 %>% group_by(SIM_dir,Trophic.Mode,Guild)%>%summarise_at(vars(av_Ecotone,av_Grassland),
+                                                                                               list(~sum(.),~n()))
+
+
+write.csv(MUD.data_PLJA.simp_funguild_sig_top500,"R_files/MUD_sig_simper_fungi_80c_PLJA_Eco_V_Grassland_T500.csv", row.names = T)
+
+
+#BOER in Grassland v Ecotone
+MUD.data_BOER.simp_funguild_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_BOER_Eco_V_Grassland.csv")
+head(MUD.data_BOER.simp_funguild_sig)
+nrow(MUD.data_BOER.simp_funguild_sig)
+#119
+#need to remove the previous classifications 
+MUD.data_BOER.simp_funguild_sig[,c("X","Domain","Phylum","Class","Order","Family","Genus","Species","taxonomy","Taxon","Taxon.Level","Trophic.Mode","Guild",
+                                   "Growth.Morphology","Trait","Confidence.Ranking","Notes","Citation.Source")]=NULL
+
+#Let's create a column that categories the simper direction 
+MUD.data_BOER.simp_funguild_sig$SIM_dir=if_else(MUD.data_BOER.simp_funguild_sig$av_Ecotone<MUD.data_BOER.simp_funguild_sig$av_Grassland, "Grassland","Ecotone")
+
+
+#Merge with the new classification
+MUD.data_BOER.simp_funguild_sig_top500=merge(MUD.data_BOER.simp_funguild_sig,top500_funGuild_raw,by.x="OTU", by.y="OTU.ID")
+head(MUD.data_BOER.simp_funguild_sig_top500)
+nrow(MUD.data_BOER.simp_funguild_sig_top500)
+#70
+
+MUD.data_BOER.simp_funguild_sig_top500 %>% group_by(SIM_dir,Trophic.Mode,Guild)%>%summarise_at(vars(av_Ecotone,av_Grassland),
+                                                                                               list(~sum(.),~n()))
+
+
+write.csv(MUD.data_BOER.simp_funguild_sig_top500,"R_files/MUD_sig_simper_fungi_80c_BOER_Eco_V_Grassland_T500.csv", row.names = T)
+
+
+#In Ecotone LATR versus PLJA
+MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_Ecotone_LATR_PLJA.csv")
+head(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig)
+nrow(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig)
+#73
+#need to remove the previous classifications 
+MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig[,c("X","Domain","Phylum","Class","Order","Family","Genus","Species","taxonomy","Taxon","Taxon.Level","Trophic.Mode","Guild",
+                                   "Growth.Morphology","Trait","Confidence.Ranking","Notes","Citation.Source")]=NULL
+
+#Let's create a column that categories the simper direction 
+MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig$SIM_dir=if_else(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig$av_LATR<MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig$av_PLJA, "PLJA","LATR")
+
+
+#Merge with the new classification
+MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig_top500=merge(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig,top500_funGuild_raw,by.x="OTU", by.y="OTU.ID")
+head(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig_top500)
+nrow(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig_top500)
+#36
+
+MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig_top500 %>% group_by(SIM_dir,Trophic.Mode,Guild)%>%summarise_at(vars(av_LATR,av_PLJA),
+                                                                                               list(~sum(.),~n()))
+
+
+write.csv(MUD.data_map_Ecotone.simp_funguild_LATR_PLJA_sig_top500,"R_files/MUD_sig_simper_fungi_80c_Ecotone_LATR_PLJA_T500.csv", row.names = T)
+
+
+
+#In Ecotone LATR versus BOER
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_Ecotone_BEOR_LATR.csv")
+head(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig)
+nrow(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig)
+#66
+#need to remove the previous classifications 
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig[,c("X","Domain","Phylum","Class","Order","Family","Genus","Species","taxonomy","Taxon","Taxon.Level","Trophic.Mode","Guild",
+                                                    "Growth.Morphology","Trait","Confidence.Ranking","Notes","Citation.Source")]=NULL
+
+#Let's create a column that categories the simper direction 
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig$SIM_dir=if_else(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig$av_LATR<MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig$av_BEOR, "BEOR","LATR")
+
+
+#Merge with the new classification
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top500=merge(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig,top500_funGuild_raw,by.x="OTU", by.y="OTU.ID")
+head(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top500)
+nrow(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top500)
+#40
+
+MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top500 %>% group_by(SIM_dir,Trophic.Mode,Guild)%>%summarise_at(vars(av_LATR,av_BEOR),
+                                                                                                                list(~sum(.),~n()))
+
+
+write.csv(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig_top500,"R_files/MUD_sig_simper_fungi_80c_Ecotone_BEOR_LATR_T500.csv", row.names = T)
+
+
+#BOER in Shrubland v Ecotone
+MUD.data_LATR.simp_funguild_mat_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub.csv")
+head(MUD.data_LATR.simp_funguild_mat_sig)
+nrow(MUD.data_LATR.simp_funguild_mat_sig)
+#56
+#need to remove the previous classifications 
+MUD.data_LATR.simp_funguild_mat_sig[,c("X","Domain","Phylum","Class","Order","Family","Genus","Species","taxonomy","Taxon","Taxon.Level","Trophic.Mode","Guild",
+                                                    "Growth.Morphology","Trait","Confidence.Ranking","Notes","Citation.Source")]=NULL
+
+#Let's create a column that categories the simper direction 
+MUD.data_LATR.simp_funguild_mat_sig$SIM_dir=if_else(MUD.data_LATR.simp_funguild_mat_sig$av_Ecotone<MUD.data_LATR.simp_funguild_mat_sig$av_Shrub, "Shrubland","Ecotone")
+
+
+#Merge with the new classification
+MUD.data_LATR.simp_funguild_mat_sig_top500=merge(MUD.data_LATR.simp_funguild_mat_sig,top500_funGuild_raw,by.x="OTU", by.y="OTU.ID")
+head(MUD.data_LATR.simp_funguild_mat_sig_top500)
+nrow(MUD.data_LATR.simp_funguild_mat_sig_top500)
+#34
+
+MUD.data_LATR.simp_funguild_mat_sig_top500 %>% group_by(SIM_dir,Trophic.Mode,Guild)%>%summarise_at(vars(av_Ecotone,av_Shrub),
+                                                                                                                list(~sum(.),~n()))
+
+
+write.csv(MUD.data_LATR.simp_funguild_mat_sig_top500,"R_files/MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub_T500.csv", row.names = T)
+
+
+
+
 
 
 #####NEED TO UPDATE THE BELOW CODE####
