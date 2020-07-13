@@ -881,13 +881,13 @@ Arbuscular_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_arb, aes(x=Site, y=va
 (Arbuscular_T_p=Arbuscular_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
     geom_boxplot(data=Arbuscular_g$data, aes(x=Site, y=value, fill=factor(Species, levels=spp_pos)), outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
     scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+
-    scale_colour_manual(values=c("black","black","black","black"), labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_colour_manual(values=c("black","black","black","black"), labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
     scale_y_continuous(name = "Arbuscular mycorrhizal")+
     xlab(NULL)+
     scale_fill_manual(limits = spp_pos, values=c("coral1", "sienna", "bisque1", "turquoise3"),                                          labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
     theme_bw()+
     annotate("text", x = 0.75, y = 10 , label = "p = 0.03") +
-    theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+    theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
 
@@ -917,11 +917,11 @@ Sapro_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Sapr, aes(x=Site, y=value)
                                              fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
     scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+                                                                                                           labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
     scale_y_continuous(name = "Saprotroph")+xlab(NULL)+
     scale_fill_manual(limits = spp_pos, values=c("coral1", "sienna", "bisque1", "turquoise3"), labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
     theme_bw()+
-    theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+    theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
@@ -950,11 +950,11 @@ Plant_path_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Path, aes(x=Site, y=v
                                         fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
     scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+                                                                                                           labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
     scale_y_continuous(name = "Plant pathogen")+
     xlab(NULL)+
     scale_fill_manual(limits = spp_pos,  values=c("coral1", "sienna", "bisque1", "turquoise3"), labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
-    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
@@ -986,8 +986,8 @@ Endop_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Endo, aes(x=Site, y=value)
                                                                                                            labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
     scale_y_continuous(name = "Endophyte")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
                                                                                                      values=c("coral1", "sienna", "bisque1", "turquoise3"),
-                                                                                                     labels= c("BOGR","BOER","PLJA","LATR"))+
-    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                                                                                                     labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
