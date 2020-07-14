@@ -147,8 +147,8 @@ Anova(Shannon_mod, type=3)
 
 
 #####Graphing Shannon Diversity####
-positions2=c("G","E","S")
-spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("S","E","G")
+spp_pos=c("Latr","Boer",  "Plja", "Bogr")
 Shannon_g=ggplot(MUD.data.divfil, aes(x=Site, y=Shannon),
                     fill=Species)
 
@@ -156,12 +156,12 @@ Shannon_g=ggplot(MUD.data.divfil, aes(x=Site, y=Shannon),
     geom_boxplot(data=Shannon_g$data, aes(x=Site, y=Shannon,
                                              fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
-    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_x_discrete(limits = positions2,labels= c("Shrubland","Ecotone","Grassland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     scale_y_continuous(name = "Shannon diversity")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
-                                                                                         values=c("coral1", "sienna", "bisque1", "turquoise3"),
-                                                                                         labels= c("BOGR","BOER","PLJA","LATR"))+
-    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                                                                                         values=c("turquoise3", "sienna", "bisque1","coral1" ),
+                                                                                         labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=12,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 #####Inverse Simpson Diversity Model####
@@ -176,8 +176,8 @@ Anova(Simpson_mod, type=3)
 #emmeans(Shannon_mod, pairwise~Site)
 
 #####Graphing Inverse Simpson Diversity####
-positions2=c("G","E","S")
-spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("S","E","G")
+spp_pos=c("Latr","Boer",  "Plja", "Bogr")
 Simpson_g=ggplot(MUD.data.divfil, aes(x=Site, y=InvSimpson),
                  fill=Species)
 
@@ -185,13 +185,26 @@ Simpson_g=ggplot(MUD.data.divfil, aes(x=Site, y=InvSimpson),
     geom_boxplot(data=Simpson_g$data, aes(x=Site, y=InvSimpson,
                                           fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
-    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_x_discrete(limits = positions2,labels= c("Shrubland","Ecotone","Grassland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     scale_y_continuous(name = "Inverse Simpson diversity")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
-                                                                                values=c("coral1", "sienna", "bisque1", "turquoise3"),
-                                                                                labels= c("BOGR","BOER","PLJA","LATR"))+
-    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                                                                                values=c("turquoise3", "sienna", "bisque1", "coral1"),
+                                                                                labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=12,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
+
+### Graph for Chao is run around line 590  ######
+
+# putting diversity graphs together
+dev.off() #cleaning R, just in case
+pdf("/Users/laura/Desktop/Writing Projects/MUD Transition/R 2020/MUD_Transition/results/Diversity_FigureS1_20200714.pdf", width = 5, height = 14) #This saves the pdf
+ggarrange(Shannon_box_p, Simpson_box_p, Chao1_R_box_p,
+          ncol = 1,
+          nrow = 3,
+          legend = "top", 
+          common.legend = TRUE) +
+  guides(fill=guide_legend(nrow=2,byrow=TRUE))
+dev.off()
 
 
 #####Phylum Level Stacked Bar Graph####
@@ -591,8 +604,8 @@ Anova(Chao1_mod, type=3)
 
 
 #####Graphing Chao1####
-positions2=c("G","E","S")
-spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("S","E","G")
+spp_pos=c("Latr","Boer",  "Plja", "Bogr")
 Chao1_R_g=ggplot(untrans.MUD.data.divfil, aes(x=Site, y=Chao1),
                     fill=Species)
 
@@ -600,12 +613,12 @@ Chao1_R_g=ggplot(untrans.MUD.data.divfil, aes(x=Site, y=Chao1),
     geom_boxplot(data=Chao1_R_g$data, aes(x=Site, y=Chao1,
                                              fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
-    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
+    scale_x_discrete(limits = positions2,labels= c("Shrubland","Ecotone","Grassland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     scale_y_continuous(name = "Chao1 Richness")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
-                                                                                    values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
-                                                                                    labels= c("BOGR","BOER","PLJA","LATR"))+
-    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                                                                                    values=c("turquoise3", "sienna", "bisque1", "coral1"),
+                                                                                    labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=12,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
@@ -797,8 +810,8 @@ emmeans(Symbio_abun_R_mod, pairwise~Site)
 #G - S      0.3396 0.222 50 1.531   0.2852 
 
 #####Graphing Symbiotroph####
-positions2=c("G","E","S")
-spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("S","E","G")
+spp_pos=c("Latr" ,"Boer",  "Plja", "Bogr")
 Symbiotroph_g=ggplot(otu_MUD_top500_FG_sub_main_trop_M_trt_symbio, aes(x=Site, y=value),
                      fill=Species)
 
@@ -806,12 +819,14 @@ Symbiotroph_g=ggplot(otu_MUD_top500_FG_sub_main_trop_M_trt_symbio, aes(x=Site, y
     geom_boxplot(data=Symbiotroph_g$data, aes(x=Site, y=value,
                                               fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
-    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("BOGR","BOER","PLJA","LATR"))+
-    scale_y_continuous(name = "Symbiotroph")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
-                                                                                                 values=c("coral1", "sienna", "bisque1", "turquoise3"),
-                                                                                                 labels= c("BOGR","BOER","PLJA","LATR"))+
-    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+    scale_x_discrete(limits = positions2,labels= c("Shrubland","Ecotone","Grassland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
+    scale_y_continuous(name = "Symbiotroph")+xlab(NULL)+
+    annotate("text", x = 0.75, y = 10 , label = "p = 0.06", size = 5) +
+    scale_fill_manual(limits = spp_pos, 
+                                                                                                 values=c("turquoise3", "sienna", "bisque1", "coral1"),
+                                                                                                 labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
@@ -873,20 +888,23 @@ emmeans(Arbu_abun_R_mod, pairwise~Site)
 
 
 #####Graphing Arbuscular Mycorrhizal#####
-positions2=c("G","E","S")
-spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("S","E","G")
+spp_pos=c("Latr" ,"Boer",  "Plja", "Bogr")
 Arbuscular_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_arb, aes(x=Site, y=value),
                      fill=Species)
 
 (Arbuscular_T_p=Arbuscular_g+stat_boxplot(geom = "errorbar", aes(color=factor(Species, levels=spp_pos)),position = position_dodge2(width = 0.5, padding = 0.5,preserve = "single"))+
     geom_boxplot(data=Arbuscular_g$data, aes(x=Site, y=value, fill=factor(Species, levels=spp_pos)), outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
-    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+
-    scale_colour_manual(values=c("black","black","black","black"), labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
+    scale_x_discrete(limits = positions2,labels= c("Shrubland","Ecotone","Grassland"))+
+    scale_colour_manual(values=c("black","black","black","black"), labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     scale_y_continuous(name = "Arbuscular mycorrhizal")+
     xlab(NULL)+
-    scale_fill_manual(limits = spp_pos, values=c("coral1", "sienna", "bisque1", "turquoise3"),                                          labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
+    scale_fill_manual(limits = spp_pos, values=c("turquoise3", "sienna", "bisque1", "coral1"),                                          labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     theme_bw()+
-    annotate("text", x = 0.75, y = 10 , label = "p = 0.03") +
+    annotate("text", x = 0.75, y = 10 , label = "p = 0.03", size = 5) +
+    annotate("text", x = 1, y =100, label = "A", size = 6) +
+    annotate("text", x = 2, y =250, label = "B", size = 6) +
+    annotate("text", x = 3, y =200, label = "AB", size = 6) +
     theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
@@ -907,8 +925,8 @@ emmeans(Sapr_abun_R_mod, pairwise~Site)
 
 
 #####Graphing Saprotroph Guild####
-positions2=c("G","E","S")
-spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("S","E","G")
+spp_pos=c("Latr" ,"Boer",  "Plja", "Bogr")
 Sapro_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Sapr, aes(x=Site, y=value),
                     fill=Species)
 
@@ -916,10 +934,10 @@ Sapro_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Sapr, aes(x=Site, y=value)
     geom_boxplot(data=Sapro_g$data, aes(x=Site, y=value,
                                              fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
-    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
+    scale_x_discrete(limits = positions2,labels= c("Shrubland","Ecotone","Grassland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     scale_y_continuous(name = "Saprotroph")+xlab(NULL)+
-    scale_fill_manual(limits = spp_pos, values=c("coral1", "sienna", "bisque1", "turquoise3"), labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
+    scale_fill_manual(limits = spp_pos, values=c("turquoise3", "sienna", "bisque1", "coral1"), labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     theme_bw()+
     theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
@@ -940,8 +958,8 @@ Anova(Path_abun_R_mod, type=3)
 emmeans(Path_abun_R_mod, pairwise~Site)
 
 ####Graphing Plant Pathogen####
-positions2=c("G","E","S")
-spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("S","E","G")
+spp_pos=c("Latr" ,"Boer",  "Plja", "Bogr")
 Plant_path_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Path, aes(x=Site, y=value),
                fill=Species)
 
@@ -949,12 +967,12 @@ Plant_path_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Path, aes(x=Site, y=v
     geom_boxplot(data=Plant_path_g$data, aes(x=Site, y=value,
                                         fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
-    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
+    scale_x_discrete(limits = positions2,labels= c("Shrubland","Ecotone","Grassland"))+scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     scale_y_continuous(name = "Plant pathogen")+
     xlab(NULL)+
-    scale_fill_manual(limits = spp_pos,  values=c("coral1", "sienna", "bisque1", "turquoise3"), labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
-    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+    scale_fill_manual(limits = spp_pos,  values=c("turquoise3", "sienna", "bisque1", "coral1"), labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
@@ -973,8 +991,8 @@ Anova(Endo_abun_R_mod, type=3)
 emmeans(Endo_abun_R_mod, pairwise~Site)
 
 #####Graphing Endophytes####
-positions2=c("G","E","S")
-spp_pos=c("Bogr","Boer",  "Plja", "Latr")
+positions2=c("S","E","G")
+spp_pos=c("Latr" ,"Boer",  "Plja", "Bogr")
 Endop_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Endo, aes(x=Site, y=value),
                     fill=Species)
 
@@ -982,22 +1000,30 @@ Endop_g=ggplot(otu_MUD_top500_FG_sub_main_guild_M_trt_Endo, aes(x=Site, y=value)
     geom_boxplot(data=Endop_g$data, aes(x=Site, y=value,
                                              fill=factor(Species, levels=spp_pos)),
                  outlier.shape = 19, outlier.size = 2.5,position = position_dodge2(preserve = "single") )+
-    scale_x_discrete(limits = positions2,labels= c("Grassland","Ecotone","Shrubland"))+scale_colour_manual(values=c("black","black","black","black"),
-                                                                                                           labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
+    scale_x_discrete(limits = positions2,labels= c("Shrubland","Ecotone","Grassland"))+
+    scale_colour_manual(values=c("black","black","black","black"),
+                                                                                                           labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
     scale_y_continuous(name = "Endophyte")+xlab(NULL)+scale_fill_manual(limits = spp_pos, 
-                                                                                                     values=c("coral1", "sienna", "bisque1", "turquoise3"),
-                                                                                                     labels= c("B. gracilis","B. eriopoda","P. jamesii","L. tridentata"))+
-    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_text(size=18), 
+                                                                                                     values=c("turquoise3", "sienna", "bisque1", "coral1"),
+                                                                                                     labels= c("L. tridentata","B. eriopoda","P. jamesii", "B. gracilis"))+
+    theme_bw()+theme(legend.title = element_blank(), legend.text=element_text(size=16,face = "italic"), axis.text.y=element_text(size=18),axis.text.x=element_blank(), 
                      axis.title=element_text(size=20),panel.grid.major=element_blank(),panel.grid.minor=element_blank()))
 
 
 ## Trying to organize the graphs into a panel
 library(ggpubr)
 
-## TO DO: change font of legend to italic, get rid of second legend with species abreviations, ajust font size to look good, figure out what happened to symionts
-ggarrange(Endophyte_G_p, Arbuscular_T_p, Plant_path_G_p, Saprotroph_G_p, 
+## TO DO:  ajust font size to look good, 
+dev.off() #cleaning R, just in case
+pdf("/Users/laura/Desktop/Writing Projects/MUD Transition/R 2020/MUD_Transition/results/FUNGuild_Figure6_20200714.pdf", width = 10, height = 14) #This saves the pdf
+
+ggarrange(Endophyte_G_p, Symbiotroph_T_p, Plant_path_G_p, Saprotroph_G_p, Arbuscular_T_p,
+          ncol = 2,
+          nrow = 3,
           legend = "top", 
           common.legend = TRUE)
+dev.off()
+
 
 
 
