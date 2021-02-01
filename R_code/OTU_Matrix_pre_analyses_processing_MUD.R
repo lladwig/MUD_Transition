@@ -349,6 +349,28 @@ save(MUD.Fung_only_field, file = "D:/MUD_SequenceData/Analyses_collaboration/MUD
 write.table(otu_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.txt")
 
 
+#####Top 250 Taxa####
+
+load("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
+
+sum(sort(taxa_sums(MUD.Fung_only_field),decreasing = T)[1:250])
+#1769527
+sum(taxa_sums(MUD.Fung_only_field))
+#2288921
+1769527/2288921
+#0.7730835
+
+#####Top 500 Taxa####
+
+sum(sort(taxa_sums(MUD.Fung_only_field),decreasing = T)[1:500])
+#2054272
+sum(taxa_sums(MUD.Fung_only_field))
+#2288921
+2054272/2288921
+#0.7730835
+
+
+
 #####Normalize the OTU matrix with DESEQ2####
 #nomalizing using DESEQ2
 
