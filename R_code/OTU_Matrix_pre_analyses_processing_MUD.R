@@ -5,6 +5,7 @@ library(phyloseq)
 library("seqinr")
 library(taxize)
 library(tidyr)
+library(stringr)
 #Set this for querying data from the NCBI
 #Sys.setenv(ENTREZ_KEY = )
 '%w/o%' <- function(x,y)!('%in%'(x,y))
@@ -263,14 +264,16 @@ ntaxa(MUD.Fung_fungi)
 sum(otu_table(MUD.Fung_fungi))
 #3931394
 
-#Output the newly formatted OTU table and taxon table
-write.table(tax_table(MUD.Fung_fungi), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_fungi_taxon_ITS_trunc_phyl.txt") 
-write.table(otu_table(MUD.Fung_fungi), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_fungi_OTU_ITS_trunc_phyl.txt") 
+
+
 #####Filtering out non-fungi from the Phyloseq Object####
 
 
+#Output the newly formatted OTU table and taxon table
+write.table(tax_table(MUD.Fung_fungi), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_fungi_taxon_ITS_trunc_phyl.txt") 
+write.table(otu_table(MUD.Fung_fungi), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_fungi_OTU_ITS_trunc_phyl.txt") 
 
-#####Creation of OTU sums for use in PROTAX####
+#####Creation of OTU sums####
 #Let's first remove the mock community and SPEGAR
 
 MUD.Fung_fungi_map=sample_data(MUD.Fung_fungi)
@@ -335,6 +338,11 @@ write.fasta(sequences =MUD.sort_rep_set_seq_sort, names = names(MUD.sort_rep_set
 
 #OTU10 Eukaryota; Fungi; Dikarya; Basidiomycota; Ustilaginomycotina; Malasseziomycetes; Malasseziales; Malasseziaceae; Malassezia.
 #Lee looked through the genus-level IDs on the revised top 500 OTUs, only OTU10 seemed to be a contaminant
+
+
+
+
+
 #####Final filtered OTU table#####
 MUD.Fung_fungi_field=subset_samples(MUD.Fung_fungi, project!="mock_com"&project!="spegar")
 MUD.Fung_fungi_field<-prune_taxa(taxa_sums(MUD.Fung_fungi_field) > 0, MUD.Fung_fungi_field)
@@ -345,8 +353,101 @@ MUD.Fung_only_field=prune_taxa(taxa_names(MUD.Fung_fungi_field)!="OTU10",MUD.Fun
 ntaxa(MUD.Fung_only_field)
 #2673
 
+
+
+#####Protax Classified Taxa to replace syntax####
+
+MUD.fung.taxa_PROTAX_UNITE8=read.csv("R_files/MUD_taxa_PROTAX.csv", header = T)
+
+head(MUD.fung.taxa_PROTAX_UNITE8)
+
+#Clean up the names
+
+MUD.fung.taxa_PROTAX_UNITE8$PROTAX=str_replace_all(MUD.fung.taxa_PROTAX_UNITE8$PROTAX,"_[1234567890]+","")
+head(MUD.fung.taxa_PROTAX_UNITE8)
+
+
+MUD.fung.taxa_PROTAX_UNITE8_sep=MUD.fung.taxa_PROTAX_UNITE8 %>% separate(PROTAX, c("Domain","Phylum","Class","Order","Family","Genus","Species"),sep = ",")
+row.names(MUD.fung.taxa_PROTAX_UNITE8_sep)=MUD.fung.taxa_PROTAX_UNITE8_sep$OTU
+MUD.fung.taxa_PROTAX_UNITE8_sep$OTU=NULL
+MUD.fung.taxa_PROTAX_UNITE8_sep[is.na(MUD.fung.taxa_PROTAX_UNITE8_sep)] <- "unk"
+unique(MUD.fung.taxa_PROTAX_UNITE8_sep$Domain)
+MUD.fung.taxa_PROTAX_UNITE8_sep$Domain=replace(MUD.fung.taxa_PROTAX_UNITE8_sep$Domain,MUD.fung.taxa_PROTAX_UNITE8_sep$Domain=="ungi","Fungi")
+MUD.fung.taxa_PROTAX_UNITE8_sep_mat=as.matrix(MUD.fung.taxa_PROTAX_UNITE8_sep)
+head(MUD.fung.taxa_PROTAX_UNITE8_sep_mat)
+
+TAXA_PROTAX_UNITE8_MUD_all=tax_table(MUD.fung.taxa_PROTAX_UNITE8_sep_mat)
+
+
+#Combine with the phyloseq object
+MUD.Fung_only_field=phyloseq(otu_table(MUD.Fung_only_field),sample_data(MUD.Fung_only_field),TAXA_PROTAX_UNITE8_MUD_all)
+ntaxa(MUD.Fung_only_field)
+#2673
+get_taxa_unique(MUD.Fung_only_field, "Domain")
+
+#Two OTUs are uknown at Domain level
+
+taxa_sums(subset_taxa(MUD.Fung_only_field,Domain==""))
+#OTU4136 OTU2554 
+#6639      24
+
+#They both BLAST to fungi on NCBI
+
 save(MUD.Fung_only_field, file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
 write.table(otu_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.txt")
+write.table(tax_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt") 
+
+#####FunGuild File Creation#####
+#Example formating
+
+#OTU ID	sample1	sample2	sample3	sample4	sample5	taxonomy
+#OTU_100	0	1	0	0	0	93.6%|Laetisaria_fuciformis|EU118639|SH012042.06FU|reps_singleton|k__Fungi;p__Basidiomycota;c__Agaricomycetes;o__Corticiales;f__Corticiaceae;g__Laetisaria;s__Laetisaria_fuciformis
+load(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
+MUD.Fung_only_field_PROTAX = read.table("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt",header = T)
+head(MUD.Fung_only_field_PROTAX)
+nrow(MUD.Fung_only_field_PROTAX)
+#2673
+
+
+#Make a Taxonmy column 
+MUD.Fung_only_field_PROTAX$taxonomy=paste("k__",MUD.Fung_only_field_PROTAX$Domain,";p__",MUD.Fung_only_field_PROTAX$Phylum,";c__",MUD.Fung_only_field_PROTAX$Class,
+                                          ";o__",MUD.Fung_only_field_PROTAX$Order,";f__",MUD.Fung_only_field_PROTAX$Family,";g__",MUD.Fung_only_field_PROTAX$Genus,
+                                          ";s__",MUD.Fung_only_field_PROTAX$Species,sep = "")
+MUD.Fung_only_field_PROTAX$OTUs=row.names(MUD.Fung_only_field_PROTAX)
+head(MUD.Fung_only_field_PROTAX)
+MUD.Fung_only_field_OTU_PROTAX=merge(otu_table(MUD.Fung_only_field),MUD.Fung_only_field_PROTAX[,c("OTUs","taxonomy")], 
+                                    by.x="row.names",by.y="OTUs")
+head(MUD.Fung_only_field_OTU_PROTAX)
+
+
+colnames(MUD.Fung_only_field_OTU_PROTAX)[1]="OTUID"
+
+
+head(MUD.Fung_only_field_OTU_PROTAX$taxonomy)
+
+write.table(MUD.Fung_only_field_OTU_PROTAX, 
+            "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.txt", row.names = F, sep = "\t") 
+write.csv(MUD.Fung_only_field_OTU_PROTAX, "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.csv", row.names = F) 
+#I had to modify this in excel (i.e. turn "OTU.ID "to "OTU ID")
+
+#RUN in shell 
+
+#cd HardDrive/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/
+#python Guilds_v1.1.py -otu MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.csv -db fungi -m -u
+
+#Found 3428 matching taxonomy records in the database.
+#Dereplicating and sorting the result...
+#FunGuild tried to assign function to 2673 OTUs in 'MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.csv'.
+#FUNGuild made assignments on 1635 OTUs.
+#Result saved to 'MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds.txt'
+
+#Additional output:
+#  FUNGuild made assignments on 1635 OTUs, these have been saved to MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds_matched.txt.
+#1038 OTUs were unassigned, these are saved to MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds_unmatched.txt.
+
+#Total calculating time: 17.66 seconds.
+
+
 
 
 #####Top 250 Taxa####
@@ -358,15 +459,6 @@ sum(sort(taxa_sums(MUD.Fung_only_field),decreasing = T)[1:250])
 sum(taxa_sums(MUD.Fung_only_field))
 #2288921
 1769527/2288921
-#0.7730835
-
-#####Top 500 Taxa####
-
-sum(sort(taxa_sums(MUD.Fung_only_field),decreasing = T)[1:500])
-#2054272
-sum(taxa_sums(MUD.Fung_only_field))
-#2288921
-2054272/2288921
 #0.7730835
 
 
