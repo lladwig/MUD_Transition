@@ -29,7 +29,7 @@ MUD.OTU = otu_table(MUD.otu, taxa_are_rows = TRUE)
 
 #Mapping file
 #this only has fungal samples in it
-MUD.map=sample_data(read.csv("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_Transition_map.csv", row.names = "sampleID"))
+MUD.map=sample_data(read.csv("R_files/MUD_Transition_map.csv", row.names = "sampleID"))
 head(MUD.map)
 nrow(MUD.map)
 
@@ -258,9 +258,7 @@ sum(otu_table(MUD.Fung_fungi))
 sort(sample_sums(MUD.Fung_fungi))
 #Min=7229 
 #Max=78152
-MUD.Fung_fungi<-prune_taxa(taxa_sums(MUD.Fung_fungi) > 0, MUD.Fung_fungi)
-ntaxa(MUD.Fung_fungi)
-#3624
+
 sum(otu_table(MUD.Fung_fungi))
 #3931394
 
@@ -349,11 +347,7 @@ MUD.Fung_fungi_field<-prune_taxa(taxa_sums(MUD.Fung_fungi_field) > 0, MUD.Fung_f
 tax_table(MUD.Fung_fungi_field)
 ntaxa(MUD.Fung_fungi_field)
 #2674
-MUD.Fung_only_field=prune_taxa(taxa_names(MUD.Fung_fungi_field)!="OTU10",MUD.Fung_fungi_field)
-ntaxa(MUD.Fung_only_field)
-#2673
-
-
+sum(taxa_sums(MUD.Fung_only_field))
 
 #####Protax Classified Taxa to replace syntax####
 
@@ -393,6 +387,14 @@ taxa_sums(subset_taxa(MUD.Fung_only_field,Domain==""))
 
 #They both BLAST to fungi on NCBI
 
+#Let's remove the common contaminant Malassezia 
+
+MUD.Fung_only_field=subset_taxa(MUD.Fung_only_field, Genus!="Malassezia")
+ntaxa(MUD.Fung_only_field)
+#2654
+sum(taxa_sums(MUD.Fung_only_field))
+#2274136
+
 save(MUD.Fung_only_field, file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
 write.table(otu_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.txt")
 write.table(tax_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt") 
@@ -406,7 +408,7 @@ load(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/M
 MUD.Fung_only_field_PROTAX = read.table("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt",header = T)
 head(MUD.Fung_only_field_PROTAX)
 nrow(MUD.Fung_only_field_PROTAX)
-#2673
+#2654
 
 
 #Make a Taxonmy column 
@@ -435,17 +437,18 @@ write.csv(MUD.Fung_only_field_OTU_PROTAX, "D:/MUD_SequenceData/Analyses_collabor
 #cd HardDrive/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/
 #python Guilds_v1.1.py -otu MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.csv -db fungi -m -u
 
-#Found 3428 matching taxonomy records in the database.
+#Found 3422 matching taxonomy records in the database.
 #Dereplicating and sorting the result...
-#FunGuild tried to assign function to 2673 OTUs in 'MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.csv'.
-#FUNGuild made assignments on 1635 OTUs.
+#FunGuild tried to assign function to 2654 OTUs in 'MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.csv'.
+#FUNGuild made assignments on 1628 OTUs.
 #Result saved to 'MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds.txt'
 
 #Additional output:
-#  FUNGuild made assignments on 1635 OTUs, these have been saved to MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds_matched.txt.
-#1038 OTUs were unassigned, these are saved to MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds_unmatched.txt.
+#  FUNGuild made assignments on 1628 OTUs, these have been saved to MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds_matched.txt.
+#1026 OTUs were unassigned, these are saved to MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds_unmatched.txt.
 
-#Total calculating time: 17.66 seconds.
+#Total calculating time: 15.91 seconds.
+
 
 
 
@@ -481,7 +484,7 @@ MUD.Fung.vsd<-varianceStabilizingTransformation(MUD.Fung.deseq)
 head(MUD.Fung.vsd)
 plotSparsity(assay(MUD.Fung.vsd))
 meanSdPlot(assay(MUD.Fung.vsd))
-#Fix for above common error from the support website https://support.bioconductor.org/p/63229/
+#Fix for common error from the support website https://support.bioconductor.org/p/63229/
 
 
 gm_mean = function(x, na.rm=TRUE){
@@ -496,19 +499,30 @@ head(assay(dseq_f2))
 dseq_f3=varianceStabilizingTransformation(dseq_f1, blind = TRUE)
 head(assay(dseq_f3))
 dseq_f4=rlog(dseq_f1, blind = TRUE)#this is much slower than VST 
-
+#Warning message:
+#  In sparseTest(counts(object, normalized = TRUE), 0.9, 100, 0.1) :
+#  the rlog assumes that data is close to a negative binomial distribution, an assumption
+#which is sometimes not compatible with datasets where many genes have many zero counts
+#despite a few very large counts.
+#In this data, for 20.2% of genes with a sum of normalized counts above 100, it was the case 
+#that a single sample's normalized count made up more than 90% of the sum over all samples.
+#the threshold for this warning is 10% of genes. See plotSparsity(dds) for a visualization of this.
+#We recommend instead using the varianceStabilizingTransformation or shifted log (see vignette).
 
 #below are visualizations of the sparsity of the data across the normalization strategies
 
 plotSparsity(assay(dseq_f3))
 plotSparsity(assay(dseq_f2))
-
+plotSparsity(assay(dseq_f4))
+plotSparsity(assay(MUD.Fung.vsd))
 #below are the visualizations of the standard deviation as read counts increase 
 #https://www.bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#count-data-transformations
 meanSdPlot(log2(counts(dseq_f1,normalized=TRUE) + 1))
 
 meanSdPlot(assay(dseq_f3))
 meanSdPlot(assay(dseq_f2))
+meanSdPlot(assay(dseq_f4))
+meanSdPlot(assay(MUD.Fung.vsd))
 #"Note that the vertical axis in such plots is the square root of the variance over all samples, 
 #so including the variance due to the experimental conditions. While a flat curve of the square root 
 #of variance over the mean may seem like the goal of such transformations, this may be unreasonable 
@@ -518,7 +532,7 @@ min(assay(MUD.Fung.vsd))
 
 MUD.Fung_vst=assay(MUD.Fung.vsd)#variance stabilized transformation OTU table in matrix form
 min(MUD.Fung_vst)
-#0.1610818
+#0.1839722
 
 MUD.Fung_vst[1:10,1:10]
 min(rowSums(MUD.Fung_vst))
