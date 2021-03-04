@@ -268,6 +268,12 @@ MUD.data.ord <- ordinate(MUD.data, method="NMDS",distance = "bray")
 #Scaling: centring, PC rotation, halfchange scaling 
 #Species: expanded scores based on 'wisconsin(veganifyOTU(physeq))' 
 
+# printing taxa associated with NMDS axes to add to Fig 3
+OTU_scores <- vegan::scores(MUD.data.ord, choices=c(1,2), display = "species")
+OTU_scores <- as.data.frame(OTU_scores) #this is what'snot working
+OTU_scores <- merge(OTU_scores, MUD.data_taxa, by="row.names", all.x = T)
+write.csv(OTU_scores, file = "R_files/MUD_OTU_NMDS_Scores.csv", row.names = T)
+
 plot_ordination(MUD.data, MUD.data.ord)
 MUD.data_map=sample_data(MUD.data)
 nrow(MUD.data_map)
