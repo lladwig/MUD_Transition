@@ -5,12 +5,11 @@ setwd("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/")
 
 
 library("ggplot2")
-library("phyloseq")
+library(phyloseq)
 library(dplyr)
 library(vegan)
 library(MASS) 
-library(lme4)
-library(lmerTest)
+# I don;t know what package I just accidentally deleted here, but "undo" is not working... Maybe be lme4 and lmerTest ?
 library(Ternary) # making triangular plots
 library(car) #for correct ANOVA table
 library(ggrepel)
@@ -205,7 +204,7 @@ Simpson_g=ggplot(MUD.data.divfil, aes(x=Site, y=InvSimpson),
 
 # putting diversity graphs together
 dev.off() #cleaning R, just in case
-pdf("/Users/laura/Desktop/Writing Projects/MUD Transition/R 2020/MUD_Transition/results/Diversity_FigureS1_20200714.pdf", width = 5, height = 14) #This saves the pdf
+pdf("/Users/laura/Desktop/Desktop/Writing Projects/MUD Transition/R 2020/MUD_Transition/results/Diversity_FigureS1_20210304.pdf", width = 5, height = 14) #This saves the pdf
 ggarrange(Shannon_box_p, Simpson_box_p, Chao1_R_box_p,
           ncol = 1,
           nrow = 3,
@@ -278,15 +277,40 @@ colnames(MUD.data_ord_points)
 spp_pos=c("Bogr","Boer",  "Plja", "Latr")
 positions2=c("G","E","S")
 
-unique(MUD.data_map$Site)
-ggplot(data=MUD.data_ord_points, aes(x=MDS1,y=MDS2))+
-  geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
-  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
-                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
-  scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
-  theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
-                   axis.title.x=element_text(size=12),axis.title.y=element_blank(),
-                   panel.grid.major=element_blank(),panel.grid.minor=element_blank())
+## Copied over graphing code from other script below 
+#unique(MUD.data_map$Site)
+#ggplot(data=MUD.data_ord_points, aes(x=MDS1,y=MDS2))+
+#  geom_point(size=3, aes(color=factor(Species, levels=spp_pos),shape=factor(Site, levels=positions2)))+
+#  scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+#                     name="",labels= c("BOGR","BOER","PLJA","LATR"))+
+#  scale_shape_manual(values=c(16,17,15),name="",labels=c("Grassland","Ecotone","Shrubland"))+
+#  theme_bw()+theme(axis.text=element_text(size=10),legend.text = element_text(size = 14),
+#                   axis.title.x=element_text(size=12),axis.title.y=element_blank(),
+#                   panel.grid.major=element_blank(),panel.grid.minor=element_blank())
+
+
+
+
+# By site; Colored based on location
+dev.off() #cleaning R, just in case
+pdf("/Users/laura/Desktop/Desktop/Writing Projects/MUD Transition/R 2020/MUD_Transition/results/NMDS_Figure3_20210304.pdf", width = 7, height = 5.5) #This saves the pdf
+ord_fig <- ggplot((data = MUD.data_ord_points), mapping = aes(x = MDS2, y = MDS1)) +
+  geom_point(aes(color = Site, fill = Site, shape = Species), size = 4) + 
+  scale_shape_manual(values = c(25, 22, 21, 24)) +
+  #geom_segment(data=vec_sort_c,aes(x=0,xend=MDS1/2,y=0,yend=MDS2/2),arrow = arrow(length = unit(0.5, "cm")),colour="grey",inherit_aes=FALSE) + 
+  #geom_text(data=vec_sort_d ,aes(x=MDS1/2,y=MDS2/2,label=Lees_id),size=4)+
+  theme_classic() +
+  scale_fill_manual(values = c("saddlebrown","brown1", "darkturquoise")) + #CHANGE!
+  scale_color_manual(values = c("black", "black", "black")) +
+  theme(panel.border = element_rect(color = "black", size = 1, fill = NA),#black line all around graph
+        text = element_text(size = 12),
+        #legend.key.size = unit(4, "lines"),
+        #legend.spacing = unit(0.5, "lines"),
+        legend.title = element_blank(),
+        legend.position = "top"
+  )
+ord_fig
+dev.off()
 
 
 #####Community composition permANOVA####
@@ -335,8 +359,8 @@ MUD.data_LATR_otu=merge(MUD.data_map_LATR,MUD.data_otu, by="row.names")
 nrow(MUD.data_LATR_otu)
 colnames(MUD.data_LATR_otu)
 
-
-MUD.data_LATR.simp <- with(MUD.data_LATR_otu, simper(MUD.data_LATR_otu[,29:ncol(MUD.data_LATR_otu)], Site,permutations=9999))
+#march 4, 2021 changed 29 to 30, but I'm not sure why an extra column would have been added with this update - LML
+MUD.data_LATR.simp <- with(MUD.data_LATR_otu, simper(MUD.data_LATR_otu[,30:ncol(MUD.data_LATR_otu)], Site,permutations=9999))
 summary(MUD.data_LATR.simp,ordered = T)
 MUD.data_LATR.simp_mat_num=as.data.frame(cbind(as.numeric(MUD.data_LATR.simp$E_S$average),as.numeric(MUD.data_LATR.simp$E_S$ava),
                                            as.numeric(MUD.data_LATR.simp$E_S$avb),as.numeric(MUD.data_LATR.simp$E_S$p)))
@@ -366,6 +390,7 @@ MUD.data_LATR.simp_funguild_mat_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_L
 MUD.data_LATR.simp_funguild_mat_sig_class=subset(MUD.data_LATR.simp_funguild_mat_sig, Guild!="-")
 nrow(MUD.data_LATR.simp_funguild_mat_sig_class)
 #19
+#updated to 34; march 2021
 
 
 #I want to extract the rep sequences that did not classify well for LATR_Eco_V_Shrub
@@ -400,7 +425,7 @@ MUD.data_map_Ecotone_otu=merge(MUD.data_map_Ecotone,MUD.data_otu, by="row.names"
 nrow(MUD.data_map_Ecotone_otu)
 colnames(MUD.data_map_Ecotone_otu)
 
-MUD.data_map_Ecotone.simp <- with(MUD.data_map_Ecotone_otu, simper(MUD.data_map_Ecotone_otu[,29:ncol(MUD.data_map_Ecotone_otu)], Spp,permutations=9999))
+MUD.data_map_Ecotone.simp <- with(MUD.data_map_Ecotone_otu, simper(MUD.data_map_Ecotone_otu[,30:ncol(MUD.data_map_Ecotone_otu)], Spp,permutations=9999))
 summary(MUD.data_map_Ecotone.simp,ordered = T)
 
 #In Ecotone BOER compared to LATR
