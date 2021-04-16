@@ -1,7 +1,7 @@
 # Code for sequence processing usrinf [USEARCH11](https://drive5.com/usearch/)
 
 
-## Demultiplex forward reads
+## [Demultiplex forward reads](https://www.drive5.com/usearch/manual/cmd_fastx_demux.html)
 In working directory
 
 ```
@@ -40,7 +40,7 @@ mkdir USEARCHv11
 
 
 
-## Check the [quality of the sequences](https://drive5.com/usearch/manual/cmd_fastq_eestats2.html)
+## [Quality check of the sequences](https://drive5.com/usearch/manual/cmd_fastq_eestats2.html)
 
 ```
 /mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastq_eestats2 no_phix_USEARCH/fwd_reads_demux_phix_filtered.fq -output USEARCHv11/fwd_reads_demux_phix_filtered_eestats2.txt
@@ -59,7 +59,7 @@ Length         MaxEE 0.50         MaxEE 1.00         MaxEE 2.00
    300     207108(  4.0%)     592435( 11.4%)    1416616( 27.2%)
 ```
    
-## Filtering and Truncate the merged seqs to MaxEE and set length using [fastq_filter](https://www.drive5.com/usearch/manual/cmd_fastq_filter.html)
+## Filtering and truncating the merged sequences by MaxEE and set length using [fastq_filter](https://www.drive5.com/usearch/manual/cmd_fastq_filter.html)
 
 ```
 /mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastq_filter no_phix_USEARCH/fwd_reads_demux_phix_filtered.fq -fastq_maxee 1 -fastq_trunclen 150 -fastaout USEARCHv11/fwd_reads_demux_phix_filtered_fil.fa
@@ -73,7 +73,7 @@ Length         MaxEE 0.50         MaxEE 1.00         MaxEE 2.00
 
 ```
 
-## Filter so we only have unique sequences with [fastx_uniques](https://drive5.com/usearch/manual/cmd_fastx_uniques.html)
+## Filtering to unique sequences with [fastx_uniques](https://drive5.com/usearch/manual/cmd_fastx_uniques.html)
 
 ```
 /mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -fastx_uniques USEARCHv11/fwd_reads_demux_phix_filtered_fil.fa  -fastaout USEARCHv11/uniques_fwd_reads_demux_phix_filtered_fil.fa -sizeout
@@ -85,7 +85,7 @@ Length         MaxEE 0.50         MaxEE 1.00         MaxEE 2.00
 
 
 
-## Cluster into 0.97 OTUs using UPARSE and [cluster_otus](https://drive5.com/usearch/manual/cmd_cluster_otus.html)
+## Clustering into 0.97 OTUs using UPARSE and [cluster_otus](https://drive5.com/usearch/manual/cmd_cluster_otus.html)
 
 ```
 /mnt/research/rdp/public/thirdParty/usearch11.0.667_i86linux64 -cluster_otus USEARCHv11/uniques_fwd_reads_demux_phix_filtered_fil.fa -otus USEARCHv11/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa -uparseout USEARCHv11/fwd_reads_demux_phix_filtered_fil_otus_uparse.txt -relabel OTU
@@ -93,7 +93,7 @@ Length         MaxEE 0.50         MaxEE 1.00         MaxEE 2.00
 #00:15 65Mb    100.0% 4833 OTUs, 1135 chimeras
 ```
 
-## Map reads back to OTUs at a 97% similarity score using [otutab](http://www.drive5.com/usearch/manual/cmd_otutab.html)
+## Mapping reads back to OTUs at a 97% similarity using [otutab](http://www.drive5.com/usearch/manual/cmd_otutab.html)
 
 ```
 cd /mnt/home/belldere/MUD_SequenceData/
@@ -109,7 +109,7 @@ cd /mnt/home/belldere/MUD_SequenceData/
 #02:41:08 55Mb   Writing forward_reads/fwd_reads_demux_nophix_cut_fil_OTU_jsn.biom ...done.
 ```
 
-## Classifying taxa against the reference database using [sintax](https://www.drive5.com/usearch/manual/cmd_sintax.html)
+## Classifying taxa against [SILVAv123](https://www.drive5.com/usearch/manual/sintax_downloads.html) and [UNITev8_02.02.2019](https://unite.ut.ee/repository.php) database using [sintax](https://www.drive5.com/usearch/manual/cmd_sintax.html)
 
 ```
 #Fungal
