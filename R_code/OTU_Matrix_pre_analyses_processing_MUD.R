@@ -1,22 +1,22 @@
-#####Code for the processing of FUngal Community Before analyses####
+#####Code for the processing of Fungal Community before analyses####
 
 #Load Packages
 library(phyloseq)
-library("seqinr")
+library(seqinr)
 library(taxize)
 library(tidyr)
 library(stringr)
 #Set this for querying data from the NCBI
 #Sys.setenv(ENTREZ_KEY = )
-'%w/o%' <- function(x,y)!('%in%'(x,y))
 
-#Set your working directory here
+
+#Set your working directory to where the github was cloned
 setwd("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/")
 
 #####Processing conducted before by hand#####
 
 
-#fungi
+#Load in OTU table
 
 
 MUD.otu=read.table("USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU_table.txt", header=T, row.names = 1)
@@ -25,17 +25,18 @@ colnames(MUD.otu)
 #there is a sample that is mislabeled
 colnames(MUD.otu)[colnames(MUD.otu)=="fungi.Shurb.LATR.2"]="fungi.Shrub.LATR.2"
 head(row.names(MUD.otu))
+#Convert to a phyloseq formate
 MUD.OTU = otu_table(MUD.otu, taxa_are_rows = TRUE)
 
-#Mapping file
-#this only has fungal samples in it
+#Load in mapping file
+#this file only has fungal samples in it
 MUD.map=sample_data(read.csv("R_files/MUD_Transition_map.csv", row.names = "sampleID"))
 head(MUD.map)
 nrow(MUD.map)
 
-#Taxon table
+#Load in taxon table
 MUD.fung.taxa_raw_UNITE8= 
-  read.table("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/USEARCHv11_files/ITS_fwd_reads_demux_phix_filtered_fil_OTU_tax_v8.sintax",sep = "\t")
+  read.table("USEARCHv11_files/ITS_fwd_reads_demux_phix_filtered_fil_OTU_tax_v8.sintax",sep = "\t")
 nrow(MUD.fung.taxa_raw_UNITE8)
 #4833
 head(MUD.fung.taxa_raw_UNITE8)
@@ -56,7 +57,7 @@ TAXA_80C_UNITE8_MUD_all=tax_table(MUD.fung.taxa_80C_UNITE8_sep_mat)
 
 
 
-#Make the phyloseq object
+#Combine the files to make the phyloseq object
 MUD.fung=phyloseq(MUD.OTU,sample_data(MUD.map),TAXA_80C_UNITE8_MUD_all)
 nsamples(MUD.fung)
 
@@ -68,7 +69,7 @@ ntaxa(MUD.FUNG)
 sum(otu_table(MUD.FUNG))
 #4134944
 
-#Filter out OTUs that are not Fungi at 80% confidence
+#Filter out OTUs that are not classified to Fungi at >=80% confidence
 MUD.Fung=subset_taxa(MUD.FUNG, Domain=="d:Fungi")
 ntaxa(MUD.Fung)
 #3762
@@ -80,25 +81,25 @@ sort(sample_sums(MUD.Fung))
 #Max=78152
 
 
-#Let's make a rep set fasta for fungal dataset so we search for non-fungal reads outside of R
-rep_set.fung<- read.fasta(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
+#Let's make a rep set fasta for fungal dataset so we search can for non-fungal reads outside of R
+rep_set.fung<- read.fasta(file = "USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
 head(rep_set.fung)
 
 MUD_rep_set.fung_names=rep_set.fung[names(rep_set.fung) %in% row.names(otu_table(MUD.Fung))]
 write.fasta(sequences =MUD_rep_set.fung_names, names = names(MUD_rep_set.fung_names), 
-            file.out ="D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/rep_seq_MUD.Fung_OTU.fna")
+            file.out ="R_files/rep_seq_MUD.Fung_OTU.fna")
 
 
 #####KRACKEN Bact Search####
-#Using Galaxy online bioinformatics and Kraken to find and filter out Bacterial sequeneces
+#Using Galaxy online bioinformatics and Kraken to find and filter out Bacterial sequences
 #Kracken was used with default settings 
 #https://toolshed.g2.bx.psu.edu/view/devteam/kraken/aec58624706f
 
-MUD_poss_bact=read.delim("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/Galaxy_generated_taxonomy/Galaxy9-[Kraken-filter_on_data_5].tabular",
+MUD_poss_bact=read.delim("Galaxy_generated_taxonomy/Galaxy9-[Kraken-filter_on_data_5].tabular",
                          sep = "\t", header = F)
 head(MUD_poss_bact)
 summary(MUD_poss_bact)
-#filter out OTUs that did not match to bacteria
+#Filter out OTUs that did not match to bacteria
 MUD_poss_bact_hit_B=subset(MUD_poss_bact, V5!="P=0.000")
 nrow(MUD_poss_bact_hit_B)
 
@@ -109,7 +110,7 @@ rep_set_Kracken_bacteria=rep_set.fung[names(rep_set.fung) %in% MUD_poss_bact_hit
 head(rep_set_Kracken_bacteria)
 length(rep_set_Kracken_bacteria)
 #2
-write.fasta(sequences =rep_set_Kracken_bacteria, names = names(rep_set_Kracken_bacteria), file.out ="D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/Galaxy_generated_taxonomy/MUD_Kranken_bacteria.fna")
+write.fasta(sequences =rep_set_Kracken_bacteria, names = names(rep_set_Kracken_bacteria), file.out ="Galaxy_generated_taxonomy/MUD_Kranken_bacteria.fna")
 
 #Top hits for these taxa were 
 
@@ -124,7 +125,7 @@ tax_table(MUD.Fung_bact)
 #TOTU4819 "d:Fungi" "p:Ascomycota" "c:Pezizomycetes" "o:Pezizales" "f:Ascobolaceae" "UNKNOWN" "UNKNOWN"
 #OTU4472 "d:Fungi" "UNKNOWN"      "UNKNOWN"         "UNKNOWN"     "UNKNOWN"        "UNKNOWN" "UNKNOWN"
 
-#Now I want to export unknown sequences and blast them to see if there are any crappy seq or lingering bacteria
+#Now I want to export unknown sequences and blast them to see if there are any crappy sequences or lingering bacteria
 MUD.Fung_unk=subset_taxa(MUD.Fung, Phylum=="UNKNOWN")
 ntaxa(MUD.Fung_unk)
 #938
@@ -137,7 +138,7 @@ rep_set_unknown=rep_set.fung[names(rep_set.fung) %in% taxa_names(MUD.Fung_unk)]
 head(rep_set_unknown)
 length(rep_set_unknown)
 #938
-write.fasta(sequences =rep_set_unknown, names = names(rep_set_unknown), file.out ="D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/UNKNOWN_taxa/MUD_unknown_phyla_seq.fna")
+write.fasta(sequences =rep_set_unknown, names = names(rep_set_unknown), file.out ="UNKNOWN_taxa/MUD_unknown_phyla_seq.fna")
 
 
 #####NCBI UNKNOWN OTUs Search####
@@ -150,20 +151,20 @@ write.fasta(sequences =rep_set_unknown, names = names(rep_set_unknown), file.out
 #Read in hit table 
 
 
-ncbi_UNKNOWN=read.csv("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/UNKNOWN_taxa/U4MJ00GY014-Alignment-HitTable.csv",
+ncbi_UNKNOWN=read.csv("UNKNOWN_taxa/U4MJ00GY014-Alignment-HitTable.csv",
                       header = F)
 head(ncbi_UNKNOWN)
 nrow(ncbi_UNKNOWN)
 #32212
 ncbi_UNKNOWN[,c(1,2)]
 
-#I only care about the top value so I need to remove the duplicate hits
+#We only care about the top value so I need to remove the duplicate hits
 ncbi_UNKNOWN_uq <- ncbi_UNKNOWN[!duplicated(ncbi_UNKNOWN[,"V1"]),]
 nrow(ncbi_UNKNOWN_uq)
 #800
 
 
-#Now we need to pull the classifications from the IDs
+#Now we need to download the classifications from NCBI usingthe IDs
 for (i in seq(nrow(ncbi_UNKNOWN_uq))) {
   ncbi_UNKNOWN_uq$uid[i]=genbank2uid(id = (as.character(ncbi_UNKNOWN_uq[i,2])))
   
@@ -216,7 +217,7 @@ for (i in seq(length((ncbi_UNKNOWN_uq_Euk$uid)))) {
 }
 
 unique(ncbi_UNKNOWN_uq_Euk$King_2)
-#subset to only fungi
+#Subset taxa to only include fungi
 ncbi_UNKNOWN_uq_Euk_fungi=subset(ncbi_UNKNOWN_uq_Euk,King_2=="Fungi")
 nrow(ncbi_UNKNOWN_uq_Euk_fungi)
 #800
@@ -239,11 +240,11 @@ length(MUD.Fung_tax_names)
 MUD.Fung_no_bact_tax_names_fungi<-MUD.Fung_tax_names[MUD.Fung_tax_names %w/o% MUD.Fung_tax_names_unk_not_fungi]
 length(MUD.Fung_no_bact_tax_names_fungi)
 #3624
-save(MUD.Fung_no_bact_tax_names_fungi, file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/UNKNOWN_taxa/List_NCBI_fungi_OTUs.Rdata")
+save(MUD.Fung_no_bact_tax_names_fungi, file = "MUD_Transition/UNKNOWN_taxa/List_NCBI_fungi_OTUs.Rdata")
 #####NCBI UNKNOWN OTUs Search####
 
 #####Filtering out non-fungi from the Phyloseq Object####
-load(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/UNKNOWN_taxa/List_NCBI_fungi_OTUs.Rdata")
+load(file = "UNKNOWN_taxa/List_NCBI_fungi_OTUs.Rdata")
 
 
 #Now filter out the taxa from the phyloseq object
@@ -268,11 +269,11 @@ sum(otu_table(MUD.Fung_fungi))
 
 
 #Output the newly formatted OTU table and taxon table
-write.table(tax_table(MUD.Fung_fungi), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_fungi_taxon_ITS_trunc_phyl.txt") 
-write.table(otu_table(MUD.Fung_fungi), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_fungi_OTU_ITS_trunc_phyl.txt") 
+write.table(tax_table(MUD.Fung_fungi), "R_files/MUD_fungi_fungi_taxon_ITS_trunc_phyl.txt") 
+write.table(otu_table(MUD.Fung_fungi), "R_files/MUD_fungi_fungi_OTU_ITS_trunc_phyl.txt") 
 
 #####Creation of OTU sums####
-#Let's first remove the mock community and SPEGAR
+#Let's first remove the mock community and SPEGAR (an unrelated project)
 
 MUD.Fung_fungi_map=sample_data(MUD.Fung_fungi)
 head(MUD.Fung_fungi_map)
@@ -318,19 +319,19 @@ colnames(MUD.OTU_sum_comb_taxa)[1]="OTU"
 nrow(MUD.OTU_sum_comb_taxa)
 
 
-#Subsetting the representative sequences 
-unfilter_rep_set_seq<- read.fasta(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
+#Subsetting the representative sequences to inlcude only fungal sequences
+unfilter_rep_set_seq<- read.fasta(file = "USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
 
-MUD.sort_rep_set_seq=unfilter_rep_set_seq[names(unfilter_rep_set_seq) %in% MUD.OTU_sum_taxa_funguild_sort$OTU]
+MUD.sort_rep_set_seq=unfilter_rep_set_seq[names(unfilter_rep_set_seq) %in% MUD.OTU_sum_comb_taxa$OTU]
 MUD.sort_rep_set_seq[names(MUD.sort_rep_set_seq)]
 length(MUD.sort_rep_set_seq)
 #2674
 MUD.sort_rep_set_seq=MUD.sort_rep_set_seq[order(names(MUD.sort_rep_set_seq))]
 head(MUD.sort_rep_set_seq)
 length(MUD.sort_rep_set_seq)
-MUD.sort_rep_set_seq_sort=MUD.sort_rep_set_seq[order(-MUD.OTU_sum_taxa_funguild$OTU_sum)]
+MUD.sort_rep_set_seq_sort=MUD.sort_rep_set_seq[order(-MUD.OTU_sum_comb_taxa$total_OTU_sum)]
 head(MUD.sort_rep_set_seq_sort)
-write.fasta(sequences =MUD.sort_rep_set_seq_sort, names = names(MUD.sort_rep_set_seq_sort), file.out ="D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_rep_set_desending_sort.fna")
+write.fasta(sequences =MUD.sort_rep_set_seq_sort, names = names(MUD.sort_rep_set_seq_sort), file.out ="R_files/MUD_rep_set_desending_sort.fna")
 
 #Spot check of the top 20 most abundant
 
@@ -347,15 +348,15 @@ MUD.Fung_fungi_field<-prune_taxa(taxa_sums(MUD.Fung_fungi_field) > 0, MUD.Fung_f
 tax_table(MUD.Fung_fungi_field)
 ntaxa(MUD.Fung_fungi_field)
 #2674
-sum(taxa_sums(MUD.Fung_only_field))
-
+sum(taxa_sums(MUD.Fung_fungi_field))
+#2321517
 #####Protax Classified Taxa to replace syntax####
 
 MUD.fung.taxa_PROTAX_UNITE8=read.csv("R_files/MUD_taxa_PROTAX.csv", header = T)
 
 head(MUD.fung.taxa_PROTAX_UNITE8)
 
-#Clean up the names
+#Clean up the names by remove unnecessary characters
 
 MUD.fung.taxa_PROTAX_UNITE8$PROTAX=str_replace_all(MUD.fung.taxa_PROTAX_UNITE8$PROTAX,"_[1234567890]+","")
 head(MUD.fung.taxa_PROTAX_UNITE8)
@@ -374,14 +375,14 @@ TAXA_PROTAX_UNITE8_MUD_all=tax_table(MUD.fung.taxa_PROTAX_UNITE8_sep_mat)
 
 
 #Combine with the phyloseq object
-MUD.Fung_only_field=phyloseq(otu_table(MUD.Fung_only_field),sample_data(MUD.Fung_only_field),TAXA_PROTAX_UNITE8_MUD_all)
-ntaxa(MUD.Fung_only_field)
-#2673
-get_taxa_unique(MUD.Fung_only_field, "Domain")
+MUD.Fung_fungi_field_P=phyloseq(otu_table(MUD.Fung_fungi_field),sample_data(MUD.Fung_fungi_field),TAXA_PROTAX_UNITE8_MUD_all)
+ntaxa(MUD.Fung_fungi_field_P)
+#2674
+get_taxa_unique(MUD.Fung_fungi_field_P, "Domain")
+#"Fungi" "" 
+#Two OTUs are unknown at Domain level
 
-#Two OTUs are uknown at Domain level
-
-taxa_sums(subset_taxa(MUD.Fung_only_field,Domain==""))
+taxa_sums(subset_taxa(MUD.Fung_fungi_field_P,Domain==""))
 #OTU4136 OTU2554 
 #6639      24
 
@@ -389,23 +390,23 @@ taxa_sums(subset_taxa(MUD.Fung_only_field,Domain==""))
 
 #Let's remove the common contaminant Malassezia 
 
-MUD.Fung_only_field=subset_taxa(MUD.Fung_only_field, Genus!="Malassezia")
-ntaxa(MUD.Fung_only_field)
+MUD.Fung_fungi_field_P=subset_taxa(MUD.Fung_fungi_field_P, Genus!="Malassezia")
+ntaxa(MUD.Fung_fungi_field_P)
 #2654
-sum(taxa_sums(MUD.Fung_only_field))
+sum(taxa_sums(MUD.Fung_fungi_field_P))
 #2274136
 
-save(MUD.Fung_only_field, file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
-write.table(otu_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.txt")
-write.table(tax_table(MUD.Fung_only_field), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt") 
+save(MUD.Fung_fungi_field_P, file = "R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
+write.table(otu_table(MUD.Fung_fungi_field_P), "R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.txt")
+write.table(tax_table(MUD.Fung_fungi_field_P), "R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt") 
 
 #####FunGuild File Creation#####
 #Example formating
 
 #OTU ID	sample1	sample2	sample3	sample4	sample5	taxonomy
 #OTU_100	0	1	0	0	0	93.6%|Laetisaria_fuciformis|EU118639|SH012042.06FU|reps_singleton|k__Fungi;p__Basidiomycota;c__Agaricomycetes;o__Corticiales;f__Corticiaceae;g__Laetisaria;s__Laetisaria_fuciformis
-load(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
-MUD.Fung_only_field_PROTAX = read.table("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt",header = T)
+load(file = "R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
+MUD.Fung_only_field_PROTAX = read.table("R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt",header = T)
 head(MUD.Fung_only_field_PROTAX)
 nrow(MUD.Fung_only_field_PROTAX)
 #2654
@@ -417,7 +418,7 @@ MUD.Fung_only_field_PROTAX$taxonomy=paste("k__",MUD.Fung_only_field_PROTAX$Domai
                                           ";s__",MUD.Fung_only_field_PROTAX$Species,sep = "")
 MUD.Fung_only_field_PROTAX$OTUs=row.names(MUD.Fung_only_field_PROTAX)
 head(MUD.Fung_only_field_PROTAX)
-MUD.Fung_only_field_OTU_PROTAX=merge(otu_table(MUD.Fung_only_field),MUD.Fung_only_field_PROTAX[,c("OTUs","taxonomy")], 
+MUD.Fung_only_field_OTU_PROTAX=merge(otu_table(MUD.Fung_fungi_field_P),MUD.Fung_only_field_PROTAX[,c("OTUs","taxonomy")], 
                                     by.x="row.names",by.y="OTUs")
 head(MUD.Fung_only_field_OTU_PROTAX)
 
@@ -428,8 +429,8 @@ colnames(MUD.Fung_only_field_OTU_PROTAX)[1]="OTUID"
 head(MUD.Fung_only_field_OTU_PROTAX$taxonomy)
 
 write.table(MUD.Fung_only_field_OTU_PROTAX, 
-            "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.txt", row.names = F, sep = "\t") 
-write.csv(MUD.Fung_only_field_OTU_PROTAX, "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.csv", row.names = F) 
+            "R_files/MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.txt", row.names = F, sep = "\t") 
+write.csv(MUD.Fung_only_field_OTU_PROTAX, "R_files/MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.csv", row.names = F) 
 #I had to modify this in excel (i.e. turn "OTU.ID "to "OTU ID")
 
 #RUN in shell 
@@ -455,24 +456,24 @@ write.csv(MUD.Fung_only_field_OTU_PROTAX, "D:/MUD_SequenceData/Analyses_collabor
 
 #####Top 250 Taxa####
 
-load("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
+load("R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
 
-sum(sort(taxa_sums(MUD.Fung_only_field),decreasing = T)[1:250])
+sum(sort(taxa_sums(MUD.Fung_fungi_field_P),decreasing = T)[1:250])
 #1769527
-sum(taxa_sums(MUD.Fung_only_field))
-#2288921
-1769527/2288921
-#0.7730835
+sum(taxa_sums(MUD.Fung_fungi_field_P))
+#2274136
+1769527/2274136
+#0.7781096
 
 
 
 #####Normalize the OTU matrix with DESEQ2####
 #nomalizing using DESEQ2
-
+load("R_files/MUD.Fung_only_field_untransformed_phyloseq.RData")
 library(DESeq2)
 library(vsn)
-head(sample_data(MUD.Fung_only_field))
-MUD.Fung.deseq=phyloseq_to_deseq2(MUD.Fung_only_field, ~site)#need to convert the phyloseq object to deseq2 dataset
+head(sample_data(MUD.Fung_fungi_field_P))
+MUD.Fung.deseq=phyloseq_to_deseq2(MUD.Fung_fungi_field_P, ~site)#need to convert the phyloseq object to deseq2 dataset
 #your grouping factor should be you samples
 
 #First try the direct transformations
@@ -484,6 +485,7 @@ MUD.Fung.vsd<-varianceStabilizingTransformation(MUD.Fung.deseq)
 head(MUD.Fung.vsd)
 plotSparsity(assay(MUD.Fung.vsd))
 meanSdPlot(assay(MUD.Fung.vsd))
+
 #Fix for common error from the support website https://support.bioconductor.org/p/63229/
 
 
@@ -509,7 +511,8 @@ dseq_f4=rlog(dseq_f1, blind = TRUE)#this is much slower than VST
 #the threshold for this warning is 10% of genes. See plotSparsity(dds) for a visualization of this.
 #We recommend instead using the varianceStabilizingTransformation or shifted log (see vignette).
 
-#below are visualizations of the sparsity of the data across the normalization strategies
+#Below are visualizations of the sparsity of the data across the normalization strategies
+#We can use this information to choose the best transformation
 
 plotSparsity(assay(dseq_f3))
 plotSparsity(assay(dseq_f2))
@@ -538,8 +541,8 @@ MUD.Fung_vst[1:10,1:10]
 min(rowSums(MUD.Fung_vst))
 
 
-#now we need to turn it back into a phyloseq object
+#Wow we need to turn it back into a phyloseq object
 OTU.table.vst = otu_table(MUD.Fung_vst, taxa_are_rows = TRUE)
-write.table(otu_table(OTU.table.vst), "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/R_files/MUD_fungi_OTU_field_ITS_only_fung_VST.txt") 
-#phyloseq_obj_vst=phyloseq(OTU.table.vst,TAX.file, sample_data(map.file))
+write.table(otu_table(OTU.table.vst), "R_files/MUD_fungi_OTU_field_ITS_only_fung_VST.txt") 
+
 ######End of Processing#####

@@ -1,25 +1,27 @@
 #####Code for the analyses used in Ladwig et al 2020####
 
 #####Begin analyses####
+
+#Set your working directory to where the github was cloned
 setwd("D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/")
 
 
-library("ggplot2")
+#Load necessary packages 
+library(ggplot2)
 library(phyloseq)
 library(dplyr)
 library(vegan)
 library(MASS) 
-# I don;t know what package I just accidentally deleted here, but "undo" is not working... Maybe be lme4 and lmerTest ?
+library(lme4)
+library(lmerTest)
+library(RVAideMemoire)
 library(Ternary) # making triangular plots
 library(car) #for correct ANOVA table
 library(ggrepel)
-library(RVAideMemoire) # for tests after PERMANOVA
 library(emmeans)
-library("seqinr")
+library(seqinr)
 library(reshape2)
-options(contrasts=c("contr.sum", "contr.poly"))
-pa=function(x)(ifelse(x>0,1,0))
-'%w/o%' <- function(x,y)!('%in%'(x,y))
+
 #Load enzyme data
 eea <-read.csv("R_files/EEA_MUD_transition.csv")
 
@@ -46,7 +48,7 @@ colnames(MUD.OTU)
 #Load in the taxon table
 MUD.fung.tax=as.matrix(read.table("R_files/MUD_fungi_taxon_PROTAX_ITS_trunc_phyl.txt",header=T))
 nrow(MUD.fung.tax)
-#2673
+#2654
 MUD.fung.TAX = tax_table(MUD.fung.tax)
 head(eea)
 length(row.names(eea))
@@ -54,7 +56,7 @@ length(row.names(eea))
 length(row.names(trans_map))
 #90
 
-#Merge the enzyme data with the soil charateristics
+#Merge the enzyme data with the soil characteristics
 MUD.map_eea=merge(eea, trans_map,by="site")
 head(MUD.map_eea)
 length(row.names(MUD.map_eea))
@@ -63,13 +65,13 @@ head(char)
 length(row.names(char))
 #56
 
-#Remove colomuns that are repeats
+#Remove columns that are repeats
 char[,c("Location","Spp","Rep")]=NULL
 head(char)
 length(row.names(char))
 #56
 
-#Merge the mapping file with the enzymes ans soil charateristics
+#Merge the mapping file with the enzymes ans soil characteristics
 MUD.map_eea_char=merge(char, MUD.map_eea,by="site")
 head(MUD.map_eea_char)
 length(row.names(MUD.map_eea_char))
@@ -77,17 +79,17 @@ length(row.names(MUD.map_eea_char))
 rownames(MUD.map_eea_char)=MUD.map_eea_char$sampleID
 MUD.map_eea_char$site_spp=with(MUD.map_eea_char, interaction(Site,Species))
 
-#COmbine files into a phyloseq object
+#Combine files into a phyloseq object
 MUD.data=phyloseq(MUD.OTU,sample_data(MUD.map_eea_char),MUD.fung.TAX)
 
 
 ntaxa(MUD.data)
-#2673
+#2654
 sum(otu_table(MUD.data))
-#99908.89
+#102166.3
 
 min(sample_sums(MUD.data))
-#1051.587
+#1092.087
 
 max(sample_sums(MUD.data))
 #5041.467
@@ -95,25 +97,13 @@ max(sample_sums(MUD.data))
 sort(rank(sample_sums(MUD.data)))
 
 min(taxa_sums(MUD.data))
-#9.456247
+#10.73859
 sort(sample_sums(MUD.data))
-MUD.data<-prune_taxa(taxa_sums(MUD.data) > 0, MUD.data)
-ntaxa(MUD.data)
-#2673
-sum(otu_table(MUD.data))
-#99908.89
 
-min(sample_sums(MUD.data))
-#1051.587
-
-max(sample_sums(MUD.data))
-#5041.467
-
-length(sample_sums(MUD.data))
+nsamples(MUD.data)
 #56
 
 #Make a grouping factor for mixed effects models
-
 
 sample_data(MUD.data)$transect_grp=with(sample_data(MUD.data),interaction(Location,Rep))
 
@@ -127,6 +117,8 @@ save(MUD.data, file = "R_files/MUD.data_dseq2_phyloseq_obj.RData")
 #biocLite('phyloseq')
 
 load("R_files/MUD.data_dseq2_phyloseq_obj.RData")
+
+#Calculate diversity of the fungal community
 
 alpha_meas = c("Shannon", "InvSimpson")
 MUD.data.divfil=estimate_richness(MUD.data,measures=alpha_meas)
@@ -146,7 +138,7 @@ plot(Shannon_mod)
 qqPlot(resid(Shannon_mod))
 hist(resid(Shannon_mod))
 shapiro.test(resid(Shannon_mod))
-#0.03886
+#0.02552
 
 anova(Shannon_mod, type=3)
 #nada sig
@@ -176,7 +168,7 @@ plot(Simpson_mod)
 qqPlot(resid(Simpson_mod))
 hist(resid(Simpson_mod))
 shapiro.test(resid(Simpson_mod))
-#0.2116
+#0.132
 
 anova(Simpson_mod, type=3)
 #nada sig
@@ -221,7 +213,7 @@ MUD.data_fact=merge_samples(MUD.data, "site_spp")
 sample_names(MUD.data_fact)     
 
 get_taxa_unique(MUD.data_fact, taxonomic.rank="Phylum")
-#13
+#7
 (MUD.data_fact.phylum<-tax_glom(MUD.data_fact, taxrank="Phylum"))
 
 
@@ -328,14 +320,16 @@ print(test_perm)
 pairwise.perm.manova(MUD.data.dist, MUD.data_map$Location, nperm=2000)
 # RESULT: all locations different than one another
 
-# airwise analyses of communities between species
+# Pairwise analyses of communities between species
 pairwise.perm.manova(MUD.data.dist, MUD.data_map$Spp, nperm=2000)
 
 
 
 #####SIMPER ANALYSES####
+#We are going to explore what OTUs are driving the difference between communities.
+
 load("R_files/MUD.data_dseq2_phyloseq_obj.RData")
-#need the OTU table
+#Need to extract the OTU table
 MUD.data_otu=t(otu_table(MUD.data))
 
 colnames(MUD.data_otu)
@@ -395,12 +389,12 @@ MUD.data_LATR.simp_funguild_mat_sig=read.csv("R_files/MUD_sig_simper_fungi_80c_L
 #how many of the SIMPER id otus were in Funguild 
 MUD.data_LATR.simp_funguild_mat_sig_class=subset(MUD.data_LATR.simp_funguild_mat_sig, Guild!="-")
 nrow(MUD.data_LATR.simp_funguild_mat_sig_class)
-#19
+
 #updated to 34; march 2021
 
 
 #I want to extract the rep sequences that did not classify well for LATR_Eco_V_Shrub
-rep_set.fung<- read.fasta(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
+rep_set.fung<- read.fasta(file = "USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
 colnames(MUD.data_LATR.simp_funguild_mat_sig)
 nrow(MUD.data_LATR.simp_funguild_mat_sig)
 MUD.data_LATR.simp_funguild_mat_sig_uncl=subset(MUD.data_LATR.simp_funguild_mat_sig,Taxon=="-")
@@ -410,7 +404,7 @@ nrow(MUD.data_LATR.simp_funguild_mat_sig_uncl)
 rep_set_LATR_Eco_V_Shrub_uncl_OTUs=rep_set.fung[names(rep_set.fung) %in% MUD.data_LATR.simp_funguild_mat_sig_uncl[,"OTU"]]
 head(rep_set_LATR_Eco_V_Shrub_uncl_OTUs)
 length(rep_set_LATR_Eco_V_Shrub_uncl_OTUs)
-#37
+
 write.fasta(sequences =rep_set_LATR_Eco_V_Shrub_uncl_OTUs, names = names(rep_set_LATR_Eco_V_Shrub_uncl_OTUs), file.out ="R_files/MUD_sig_simper_fungi_80c_LATR_Eco_V_Shrub_uncl_rep_set.fna")
 
 #To start out, let's take the the top 10 that explain the most variation
@@ -498,7 +492,7 @@ nrow(MUD.data_map_BOER_otu)
 colnames(MUD.data_map_BOER_otu)
 
 
-MUD.data_BOER.simp <- with(MUD.data_map_BOER_otu, simper(MUD.data_map_BOER_otu[,29:ncol(MUD.data_map_BOER_otu)], Site,permutations=9999))
+MUD.data_BOER.simp <- with(MUD.data_map_BOER_otu, simper(MUD.data_map_BOER_otu[,30:ncol(MUD.data_map_BOER_otu)], Site,permutations=9999))
 summary(MUD.data_BOER.simp,ordered = T)
 MUD.data_BOER.simp_num=as.data.frame(cbind(as.numeric(MUD.data_BOER.simp$E_G$average),as.numeric(MUD.data_BOER.simp$E_G$ava),
                                                as.numeric(MUD.data_BOER.simp$E_G$avb),as.numeric(MUD.data_BOER.simp$E_G$p)))
@@ -535,7 +529,7 @@ nrow(MUD.data_map_PLJA_otu)
 colnames(MUD.data_map_PLJA_otu)
 
 
-MUD.data_PLJA.simp <- with(MUD.data_map_PLJA_otu, simper(MUD.data_map_PLJA_otu[,29:ncol(MUD.data_map_PLJA_otu)], Site,permutations=9999))
+MUD.data_PLJA.simp <- with(MUD.data_map_PLJA_otu, simper(MUD.data_map_PLJA_otu[,30:ncol(MUD.data_map_PLJA_otu)], Site,permutations=9999))
 summary(MUD.data_PLJA.simp,ordered = T)
 MUD.data_PLJA.simp_num=as.data.frame(cbind(as.numeric(MUD.data_PLJA.simp$E_G$average),as.numeric(MUD.data_PLJA.simp$E_G$ava),
                                            as.numeric(MUD.data_PLJA.simp$E_G$avb),as.numeric(MUD.data_PLJA.simp$E_G$p)))
@@ -565,7 +559,7 @@ write.csv(MUD.data_PLJA.simp_funguild_sig, "R_files/MUD_sig_simper_fungi_80c_PLJ
 MUD.data_LATR.simp_taxa_mat_sig_top10=(MUD.data_LATR.simp_taxa_mat_sig[order(-MUD.data_LATR.simp_taxa_mat_sig$average),])[1:10,]
 rownames(MUD.data_LATR.simp_taxa_mat_sig_top10)
 
-#We need a fasta file with the sequences from the SIMPER sig OTUs
+
 
 
 #####Extract SIMPER identified OTUs for further Analyses####
@@ -586,16 +580,16 @@ MUD.data_simper_OTU=c(as.character(MUD.data_PLJA.simp_funguild_sig$OTU),as.chara
                       as.character(MUD.data_map_Ecotone.simp_funguild_BOER_LATR_sig$OTU),as.character(MUD.data_LATR.simp_funguild_mat_sig$OTU))
 
 length(MUD.data_simper_OTU)
-#384
+#386
 
 #remove duplicated OTUs
 
 MUD.data_simper_OTU_unq=unique(MUD.data_simper_OTU)
 length(MUD.data_simper_OTU_unq)
-#290
+#291
 anyDuplicated(MUD.data_simper_OTU_unq)
 
-rep_set.fung<- read.fasta(file = "D:/MUD_SequenceData/Analyses_collaboration/MUD_Transition/USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
+rep_set.fung<- read.fasta(file = "USEARCHv11_files/rep_set_fwd_reads_demux_phix_filtered_fil_OTU.fa", as.string = TRUE, set.attributes = FALSE)
 
 head(rep_set.fung)
 length(rep_set.fung)
@@ -603,7 +597,7 @@ length(rep_set.fung)
 rep_set_simper_OTUs=rep_set.fung[names(rep_set.fung) %in% MUD.data_simper_OTU_unq]
 head(rep_set_simper_OTUs)
 length(rep_set_simper_OTUs)
-#290
+#291
 write.fasta(sequences =rep_set_simper_OTUs, names = names(rep_set_simper_OTUs), file.out ="R_files/MUD.data_simper_OTU_rep_set.fna")
 
 
@@ -614,24 +608,18 @@ untrans.otu=read.table("R_files/MUD_fungi_OTU_field_ITS_only_fung_untransformed.
 colnames(untrans.otu)[colnames(untrans.otu)=="fungi.Shurb.LATR.2"]="fungi.Shrub.LATR.2"
 untrans.MUD.OTU = otu_table(untrans.otu, taxa_are_rows = TRUE)
 sum(taxa_sums(untrans.MUD.OTU))
-#2288921
+#2274136
 MUD.data_untrans=phyloseq(untrans.MUD.OTU,sample_data(MUD.data),tax_table(MUD.data))
 MUD.data_untrans<-prune_taxa(taxa_sums(MUD.data_untrans) > 0, MUD.data_untrans)
 sum(taxa_sums(MUD.data_untrans))
-#2288921
+#2274136
 ntaxa(MUD.data_untrans)
-#2673
+#2654
 
 untrans.MUD.data.divfil=estimate_richness(MUD.data_untrans,measures="Chao1")
 untrans.MUD.data_map=sample_data(MUD.data_untrans)
 
 untrans.MUD.data.divfil=merge(untrans.MUD.data.divfil, untrans.MUD.data_map, by ="row.names")
-
-#####TO BE DELETED####
-MUD.data.divfil$Row.names=NULL
-
-write.csv(merge(MUD.data.divfil,untrans.MUD.data.divfil[,c("sampleID","Chao1")], by="sampleID"),"R_files/Diversity_data_MUD.csv")
-#####TO BE DELETED####
 
 
 #####Chao1 Statistical Analyses#####
@@ -640,7 +628,7 @@ plot(Chao1_mod)
 qqPlot(resid(Chao1_mod))
 hist(resid(Chao1_mod))
 shapiro.test(resid(Chao1_mod))
-#0.9987
+#0.9991
 
 anova(Chao1_mod, type=3)
 #nada sig
@@ -673,15 +661,15 @@ Chao1_R_g=ggplot(untrans.MUD.data.divfil, aes(x=Site, y=Chao1),
 load("R_files/MUD.data_dseq2_phyloseq_obj.RData")
 #MUD.data
 ntaxa(MUD.data)
-#2673
+#2654
 sum(otu_table(MUD.data))
-#99908.89
+#102166.3
 
 min(sample_sums(MUD.data))
-#1051.587
+#1092.087
 
 max(sample_sums(MUD.data))
-#5041.467
+#5046.597
 
 length(sample_sums(MUD.data))
 #56
@@ -695,7 +683,7 @@ head(otu_MUD.data$OTU.ID)
 
 
 
-#load in the top 500 taxa classified with protax and funGuild
+#load in the taxa classified with protax and funGuild
 
 funguild.PROTAX=read.delim("R_files/MUD.Fung_only_field_OTU_PROTAX_for_FunGuild.guilds.txt",sep = "\t")
 colnames(funguild.PROTAX)
@@ -704,7 +692,7 @@ funguild.PROTAX_dt=funguild.PROTAX[,c(1,58:ncol(funguild.PROTAX))]
 head(funguild.PROTAX_dt)
 otu_MUD_PrTax_FG=merge(otu_MUD.data,funguild.PROTAX_dt, by="OTU.ID", all.y = T)
 nrow(otu_MUD_PrTax_FG)
-#2673
+#2654
 head(otu_MUD_PrTax_FG)
 
 
@@ -733,6 +721,7 @@ otu_MUD_PrTax_FG_guild[order(-otu_MUD_PrTax_FG_guild$n),]
 
 
 unique(otu_MUD_PrTax_FG$Confidence.Ranking)
+
 #Limit the classification to only the "Probable" and "Highly Probable" Confidence
 
 otu_MUD_PrTax_FG_sub=subset(otu_MUD_PrTax_FG,Confidence.Ranking=="Probable"|Confidence.Ranking=="Highly Probable")
@@ -740,21 +729,21 @@ otu_MUD_PrTax_FG_sub=subset(otu_MUD_PrTax_FG,Confidence.Ranking=="Probable"|Conf
 #How many of the OTUs does this represent?
 
 nrow(otu_MUD_PrTax_FG_sub)
-#1215
+#1208
 nrow(otu_MUD_PrTax_FG)
-#2673
+#2654
 
 nrow(otu_MUD_PrTax_FG_sub)/nrow(otu_MUD_PrTax_FG)
-#0.4545455
+#0.455162
 
 #How many of the VST reads does this represent?
 sum(rowSums(otu_MUD_PrTax_FG_sub[,2:57]))
-#44129.13
+#45257.23
 sum(rowSums(otu_MUD_PrTax_FG[,2:57]))
-#99908.89
+#102166.3
 
 sum(rowSums(otu_MUD_PrTax_FG_sub[,2:57]))/sum(rowSums(otu_MUD_PrTax_FG[,2:57]))
-#0.4416938
+#0.4429763
 
 
 
@@ -776,10 +765,6 @@ otu_MUD_PrTax_FG_sub_main_trop_M_trt=merge(otu_MUD_PrTax_FG_sub_main_trop_M,samp
                                             by.y = "row.names")
 
 
-#####TO BE DELETED####
-head(otu_MUD_PrTax_FG_sub_main_trop_M_trt)
-write.csv(otu_MUD_PrTax_FG_sub_main_trop_M_trt, "R_files/Trophic_mode_FUNGuild_data.csv")
-#####TO BE DELETED####
 
 ####Saprotroph Analyses####
 otu_MUD_PrTax_FG_sub_main_trop_M_trt_sap=subset(otu_MUD_PrTax_FG_sub_main_trop_M_trt, Trophic.Mode=="Saprotroph")
@@ -789,7 +774,7 @@ plot(Saprt_abun_R_mod)
 qqPlot(resid(Saprt_abun_R_mod))
 hist(resid(Saprt_abun_R_mod))
 shapiro.test(resid(Saprt_abun_R_mod))
-#0.9915
+#0.9901
 
 anova(Saprt_abun_R_mod, type=3)
 #nada sig
@@ -823,7 +808,7 @@ plot(Patho_abun_R_mod)
 qqPlot(resid(Patho_abun_R_mod))
 hist(resid(Patho_abun_R_mod))
 shapiro.test(resid(Patho_abun_R_mod))
-#0.1749
+#0.1277
 
 anova(Patho_abun_R_mod, type=3)
 #nada sig
@@ -858,7 +843,7 @@ plot(Symbio_abun_R_mod)
 qqPlot(resid(Symbio_abun_R_mod))
 hist(resid(Symbio_abun_R_mod))
 shapiro.test(resid(Symbio_abun_R_mod))
-#0.2965
+#0.2487
 
 anova(Symbio_abun_R_mod, type=3)
 #nada sig
@@ -890,7 +875,7 @@ Symbiotroph_g=ggplot(otu_MUD_PrTax_FG_sub_main_trop_M_trt_symbio, aes(x=Site, y=
 
 #####Guild Analyses####
 
-#Need to first creat the data file by summing OTUs by Guild classification
+#Need to first create the data file by summing OTUs by Guild classification
 
 #First let's combine similar guilds (i.e. Saprotroph groups)
 otu_MUD_PrTax_FG_sub$Guild_comb=if_else(otu_MUD_PrTax_FG_sub$Guild=="Undefined Saprotroph","Saprotroph",
@@ -917,13 +902,6 @@ otu_MUD_PrTax_FG_sub_main_guild_M_trt=merge(otu_MUD_PrTax_FG_sub_main_guild_M,sa
                                             by.y = "row.names")
 
 
-#####TO BE DELETED####
-head(otu_MUD_PrTax_FG_sub_main_guild_M_trt)
-write.csv(otu_MUD_PrTax_FG_sub_main_guild_M_trt, "R_files/Guil_comb_FUNGuild_data.csv")
-#####TO BE DELETED####
-
-
-
 
 #####Arbuscular Mycorrhizal Analyses####
 otu_MUD_PrTax_FG_sub_main_guild_M_trt_arb=subset(otu_MUD_PrTax_FG_sub_main_guild_M_trt, Guild_comb=="Arbuscular Mycorrhizal")
@@ -933,14 +911,15 @@ plot(Arbu_abun_R_mod)
 qqPlot(resid(Arbu_abun_R_mod))
 hist(resid(Arbu_abun_R_mod))
 shapiro.test(resid(Arbu_abun_R_mod))
-#0.2492
+#0.2237
 
 anova(Arbu_abun_R_mod, type=3)
-#Site    0.80881  0.4044     2    50  2.9878 0.05947 .
+#Site    0.73349 0.36674     2    50  2.9021 0.06421 .
 emmeans(Arbu_abun_R_mod, pairwise~Site)
-#E - G      0.0575 0.130 31.0 0.442   0.8981 
-#E - S      0.4422 0.184 50.0 2.404   0.0513 
-#G - S      0.3847 0.225 47.3 1.708   0.2130 
+#E - G       0.056 0.126 31.0 0.446   0.8966 
+#E - S       0.421 0.178 50.0 2.368   0.0558 
+#G - S       0.365 0.218 47.3 1.676   0.2251 
+
 
 
 
@@ -975,7 +954,7 @@ plot(Sapr_abun_R_mod)
 qqPlot(resid(Sapr_abun_R_mod))
 hist(resid(Sapr_abun_R_mod))
 shapiro.test(resid(Sapr_abun_R_mod))
-#0.571
+#0.5854
 
 anova(Sapr_abun_R_mod, type=3)
 #nada sig
@@ -1010,11 +989,11 @@ plot(Path_abun_R_mod)
 qqPlot(resid(Path_abun_R_mod))
 hist(resid(Path_abun_R_mod))
 shapiro.test(resid(Path_abun_R_mod))
-#0.1218
+#0.2331
 
 anova(Path_abun_R_mod, type=3)
 #nada sig
-emmeans(Path_abun_R_mod, pairwise~Site)
+
 
 ####Graphing Plant Pathogen####
 positions2=c("S","E","G")
@@ -1044,11 +1023,11 @@ plot(Endo_abun_R_mod)
 qqPlot(resid(Endo_abun_R_mod))
 hist(resid(Endo_abun_R_mod))
 shapiro.test(resid(Endo_abun_R_mod))
-#0.1391
+#0.1523
 
 anova(Endo_abun_R_mod, type=3)
 #nada sig
-emmeans(Endo_abun_R_mod, pairwise~Site)
+
 
 #####Graphing Endophytes####
 positions2=c("S","E","G")
@@ -1091,8 +1070,9 @@ dev.off()
 load("R_files/MUD.data_dseq2_phyloseq_obj.RData")
 MUD.data_map=data.frame(sample_data(MUD.data))
 
-#SAND          CLAY  pH P_ppm K_ppm OM_percent NO3_N_ppm
-#% sand, 
+
+
+#Percentage sand analysis 
 
 Sand_R_mod <- lmer((SAND) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(Sand_R_mod)
@@ -1105,9 +1085,11 @@ anova(Sand_R_mod, type=3)
 #Site    581.01 290.507     2    49 11.1113 0.0001049 ***
 
 emmeans(Sand_R_mod, pairwise~Site)
+#E - G        6.04 1.81 30.1 3.342   0.0061 
+#E - S        8.50 2.56 49.0 3.325   0.0047 
+#G - S        2.46 3.13 46.3 0.785   0.7140 
 
-
-#% clay, 
+#Percentage clay analysis
 
 CLAY_R_mod <- lmer((CLAY) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(CLAY_R_mod)
@@ -1120,8 +1102,12 @@ anova(CLAY_R_mod, type=3)
 #Site    183.791  91.896     2    49  8.8651 0.0005175 ***
 
 emmeans(CLAY_R_mod, pairwise~Site)
+#E - G       -4.26 1.14 30.1 -3.745  0.0021 
+#E - S       -3.10 1.61 49.0 -1.926  0.1423 
+#G - S        1.16 1.97 46.3  0.590  0.8264 
 
-#% silt, 
+
+#Percentage silt analysis 
 
 SILT_R_mod <- lmer((SILT) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(SILT_R_mod)
@@ -1134,9 +1120,11 @@ anova(SILT_R_mod, type=3)
 #Site    89.217  44.609     2 36.186  5.5168 0.008105 **
 
 emmeans(SILT_R_mod, pairwise~Site)
+#E - G       -1.78 1.34 23.4 -1.331  0.3927 
+#E - S       -5.40 1.67 43.0 -3.228  0.0066 
+#G - S       -3.62 1.95 48.8 -1.855  0.1627 
 
-
-#% organic matter (OM) 
+#Percentage organic matter (OM) analysis
 
 OM_percent_R_mod <- lmer((OM_percent)^-1 ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(OM_percent_R_mod)
@@ -1149,25 +1137,38 @@ anova(OM_percent_R_mod, type=3)
 #Site    1.33705 0.66852     2    50 28.9058 4.546e-09 ***
 
 emmeans(OM_percent_R_mod, pairwise~Site)
+#E - G       0.370 0.0538 31.0  6.888  <.0001 
+#E - S       0.245 0.0760 50.0  3.220  0.0063 
+#G - S      -0.126 0.0931 47.3 -1.348  0.3763 
 
-#ppm of P
+
+#Soil phosphorus analysis (ppm)
+hist(MUD.data_map$P_ppm)
 
 P_ppm_R_mod <- lmer((P_ppm) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(P_ppm_R_mod)
 qqPlot(resid(P_ppm_R_mod))
 hist(resid(P_ppm_R_mod))
 shapiro.test(resid(P_ppm_R_mod))
-#0.6392
+#0.0001268
 
 anova(P_ppm_R_mod, type=3)
 #Species  140.89   46.96     3 33.647  3.0576   0.04152 *  
 #Site    2685.54 1342.77     2 37.458 87.4251 7.747e-15 ***
 
 emmeans(P_ppm_R_mod, pairwise~Site)
+#E - G       -3.27 0.339 26.0 -9.640  <.0001 
+#E - S        0.72 0.444 47.4  1.624  0.2457 
+#G - S        3.99 0.528 49.8  7.550  <.0001 
 emmeans(P_ppm_R_mod, pairwise~Species)
+#Boer - Bogr  -0.0706 0.379 31 -0.186  0.9977 
+#Boer - Latr  -0.5505 0.379 31 -1.453  0.4771 
+#Boer - Plja  -0.3082 0.286 31 -1.076  0.7063 
+#Bogr - Latr  -0.4800 0.496 31 -0.968  0.7686 
+#Bogr - Plja  -0.2377 0.379 31 -0.627  0.9225 
+#Latr - Plja   0.2423 0.379 31  0.640  0.9184 
 
-
-#ppm of K
+#Soil potassium analysis (ppm)
 
 K_ppm_R_mod <- lmer((K_ppm) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(K_ppm_R_mod)
@@ -1181,9 +1182,18 @@ anova(K_ppm_R_mod, type=3)
 #Site     68551   34275     2 38.522 33.1737 4.194e-09 ***
 
 emmeans(K_ppm_R_mod, pairwise~Site)
+#E - G      -108.6 13.7 25.6 -7.938  <.0001 
+#E - S        15.4 17.8 46.9  0.864  0.6652 
+#G - S       124.0 21.1 49.9  5.875  <.0001
 emmeans(K_ppm_R_mod, pairwise~Species)
+#Boer - Bogr   -24.38 15.0 30.9 -1.621  0.3819 
+#Boer - Latr   -67.38 15.0 30.9 -4.482  0.0005 
+#Boer - Plja   -28.50 11.4 30.9 -2.508  0.0784 
+#Bogr - Latr   -43.00 19.7 30.9 -2.185  0.1501 
+#Bogr - Plja    -4.12 15.0 30.9 -0.274  0.9926 
+#Latr - Plja    38.88 15.0 30.9  2.586  0.0664 
 
-#ppm of NO3-N
+#Soil nitrate analysis (ppm)
 
 NO3_N_ppm_R_mod <- lmer((NO3_N_ppm)^-1 ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(NO3_N_ppm_R_mod)
@@ -1196,12 +1206,14 @@ anova(NO3_N_ppm_R_mod, type=3)
 #Site    0.50710 0.253552     2 38.869  4.9591 0.01207 *
 
 emmeans(NO3_N_ppm_R_mod, pairwise~Site)
+#E - G      0.2445 0.0967 25.5 2.528   0.0459 
+#E - S      0.2727 0.1255 46.8 2.173   0.0864 
+#G - S      0.0282 0.1488 49.9 0.190   0.9804 
 
 
+#####Organic matter  and Soil enzymes####
 
-#####OM and Soil enzymes####
-
-#OM NAG
+#Organic matter NAG analysis
 
 NAG_OM_R_mod <- lmer(log(NAG_OM) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(NAG_OM_R_mod)
@@ -1216,7 +1228,7 @@ anova(NAG_OM_R_mod, type=3)
 
 emmeans(NAG_OM_R_mod, pairwise~Site)
 
-#OM BG 
+#Organic matter BG analysis
 
 BG_OM_R_mod <- lmer(log(BG_OM) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(BG_OM_R_mod)
@@ -1230,7 +1242,7 @@ anova(BG_OM_R_mod, type=3)
 
 emmeans(BG_OM_R_mod, pairwise~Site)
 
-#OM AAP
+#Organic matter AAP analysis
 MUD.data_map$AAP_OM=as.numeric(MUD.data_map$AAP_OM)
 AAP_OM_R_mod <- lmer((AAP_OM) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(AAP_OM_R_mod)
@@ -1245,7 +1257,7 @@ anova(AAP_OM_R_mod, type=3)
 emmeans(AAP_OM_R_mod, pairwise~Site)
 
 
-#OM AlkP
+#Organic matter AlkP analysis
 
 AlkP_OM_R_mod <- lmer(log(AlkP_OM) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(AlkP_OM_R_mod)
@@ -1259,7 +1271,7 @@ anova(AlkP_OM_R_mod, type=3)
 
 emmeans(AlkP_OM_R_mod, pairwise~Site)
 
-#soil NAG
+#Soil NAG analysis
 
 NAG_soil_R_mod <- lmer(log(NAG_soil) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(NAG_soil_R_mod)
@@ -1274,7 +1286,7 @@ anova(NAG_soil_R_mod, type=3)
 
 emmeans(NAG_soil_R_mod, pairwise~Site)
 
-#soil BG 
+#Soil BG analysis
 
 BG_soil_R_mod <- lmer(log(BG_soil) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(BG_soil_R_mod)
@@ -1288,7 +1300,7 @@ anova(BG_soil_R_mod, type=3)
 
 emmeans(BG_soil_R_mod, pairwise~Site)
 
-#soil AAP
+#Soil AAP analysis
 MUD.data_map$AAP_soil=as.numeric(MUD.data_map$AAP_soil)
 AAP_soil_R_mod <- lmer((AAP_soil) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(AAP_soil_R_mod)
@@ -1303,7 +1315,7 @@ anova(AAP_soil_R_mod, type=3)
 emmeans(AAP_soil_R_mod, pairwise~Site)
 
 
-#soil AlkP
+#Soil AlkP analysis
 
 AlkP_soil_R_mod <- lmer(log(AlkP_soil) ~ Species + Site + (1|transect_grp), data=MUD.data_map)
 plot(AlkP_soil_R_mod)
